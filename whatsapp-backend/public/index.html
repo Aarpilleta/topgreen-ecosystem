@@ -742,7 +742,14 @@
             }
         }
 
-        async function switchUser(role) {
+        async function switchUser(role, isInitial = false) {
+            if (role === 'Tony' && !isInitial && state.currentUser !== 'Tony') {
+                const pin = prompt("Introduce el PIN de seguridad para acceder como Tony:");
+                if (pin !== '2026') {
+                    triggerToast('PIN de seguridad incorrecto', 'error');
+                    return;
+                }
+            }
             state.currentUser = role;
             ['Tony', 'Recepción'].forEach(r => {
                 const btn = document.getElementById(`role-${r}`);
@@ -2138,7 +2145,7 @@
         }, 4000);
 
         window.addEventListener('DOMContentLoaded', () => {
-            switchUser('Tony');
+            switchUser('Tony', true);
             loadState();
         });
     </script>
