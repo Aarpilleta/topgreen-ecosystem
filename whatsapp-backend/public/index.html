@@ -1537,11 +1537,15 @@
         // COBRO POS WIDGETS
         function populateCheckoutFormWidgets() {
             const selectApp = document.getElementById('checkout-appointment-select');
-            const prevAppVal = selectApp.value;
-            
             const selectSrv = document.getElementById('checkout-service-select');
             const selectChStylist = document.getElementById('checkout-stylist-select');
-            const prevSrvVal = selectSrv.value;
+
+            if (selectApp && (document.activeElement === selectApp || document.activeElement === selectSrv || document.activeElement === selectChStylist)) {
+                return;
+            }
+
+            const prevAppVal = selectApp ? selectApp.value : '';
+            const prevSrvVal = selectSrv ? selectSrv.value : '';
             const prevStylistVal = selectChStylist ? selectChStylist.value : '';
             
             selectApp.innerHTML = `<option value="direct">-- Crear Venta Directa de Caja --</option>`;
