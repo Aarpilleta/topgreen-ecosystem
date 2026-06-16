@@ -93,7 +93,7 @@
                 OZ (Onzas)
             </button>
             <button onclick="toggleGlobalUnit('g')" id="unit-g" class="px-3 py-1 rounded-lg text-xs font-mono transition-all duration-200 text-zinc-400 hover:text-white">
-                Gramos
+                ML (Mililitros)
             </button>
         </div>
 
@@ -277,7 +277,7 @@
                                     </div>
                                     <div id="checkout-grams-block" class="hidden">
                                         <label class="text-[9px] uppercase font-mono text-violet-400 block mb-1 flex items-center gap-1">
-                                            <i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Gramos (g) de Tinte Usados:
+                                            <i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Mililitros (ml) de Tinte Usados:
                                         </label>
                                         <input type="number" id="checkout-tinte-grams" min="0.0" max="200.0" step="1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono" placeholder="Rango 0.0 - 200.0">
                                     </div>
@@ -668,7 +668,7 @@
 
         function getInventoryUnitName(key) {
             if (key === 'nanoplastia_elixir' || key === 'jade_tinte') {
-                return state.unitPreference === 'oz' ? 'OZ' : (key === 'nanoplastia_elixir' ? 'ml' : 'g');
+                return state.unitPreference === 'oz' ? 'OZ' : 'ml';
             }
             return 'Pzs';
         }
@@ -1690,7 +1690,7 @@
                     ozInput.step = "0.1";
                     ozInput.placeholder = "Rango 0.0 - 10.0";
                 } else {
-                    if (ozLabel) ozLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Gramos (g) Nanoplastia Usados:`;
+                    if (ozLabel) ozLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Mililitros (ml) Nanoplastia Usados:`;
                     ozInput.min = "0.0";
                     ozInput.max = "300.0";
                     ozInput.step = "1";
@@ -1711,7 +1711,7 @@
                     gramsInput.step = "0.1";
                     gramsInput.placeholder = "Rango 0.0 - 7.0";
                 } else {
-                    if (gramsLabel) gramsLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Gramos (g) de Tinte Usados:`;
+                    if (gramsLabel) gramsLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Mililitros (ml) de Tinte Usados:`;
                     gramsInput.min = "0.0";
                     gramsInput.max = "200.0";
                     gramsInput.step = "1";
@@ -1947,7 +1947,7 @@
                     qtyToDeduct = Math.round(insumoVal * 30);
                 } else {
                     if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 300) {
-                        triggerToast("Ingrese un valor de gramos de Nanoplastia entre 0.0 y 300.0", "error");
+                        triggerToast("Ingrese un valor de mililitros (ml) de Nanoplastia entre 0.0 y 300.0", "error");
                         return;
                     }
                     productCost = insumoVal * (100 / 30);
@@ -1966,7 +1966,7 @@
                     qtyToDeduct = Math.round(insumoVal * 30);
                 } else {
                     if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 200) {
-                        triggerToast("Ingrese un valor de gramos de tinte entre 0.0 y 200.0", "error");
+                        triggerToast("Ingrese un valor de mililitros (ml) de tinte entre 0.0 y 200.0", "error");
                         return;
                     }
                     productCost = insumoVal * 4;

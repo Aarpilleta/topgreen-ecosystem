@@ -300,7 +300,7 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
 -- Insert Inventario
 INSERT INTO inventario (key_name, nombre, stock, min, cost_per_unit, price, item_type) VALUES
 ('nanoplastia_elixir', 'Elixir Nanoplastia (ml)', 1500, 500, 1.50, NULL, 'insumo'),
-('jade_tinte', 'Tinte Jade Green (g)', 380, 300, 4.00, NULL, 'insumo'),
+('jade_tinte', 'Tinte Jade Green (ml)', 380, 300, 4.00, NULL, 'insumo'),
 ('shampoo_retail', 'Shampoo Jade Protect (Pzs)', 12, 4, 200.00, 450.00, 'retail'),
 ('mask_retail', 'Mascarilla Menta (Pzs)', 2, 3, 300.00, 680.00, 'retail');
 
