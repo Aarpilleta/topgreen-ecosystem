@@ -510,11 +510,39 @@
 
     <!-- Scripting Area -->
     <script>
+        function formatMXDate(date) {
+            try {
+                const dtf = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/Mexico_City',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                const parts = dtf.formatToParts(date);
+                const partMap = {};
+                parts.forEach(p => partMap[p.type] = p.value);
+                return {
+                    datePart: `${partMap.year}-${partMap.month}-${partMap.day}`,
+                    timePart: `${partMap.hour}:${partMap.minute}:00`
+                };
+            } catch (e) {
+                console.error(e);
+                const iso = date.toISOString();
+                return {
+                    datePart: iso.split('T')[0],
+                    timePart: iso.split('T')[1].substring(0, 8)
+                };
+            }
+        }
+
         const state = {
             activeTab: 'dashboard',
             currentUser: 'Tony',
             unitPreference: localStorage.getItem('topgreen_unit_preference') || 'oz',
-            selectedDate: new Date().toLocaleString('sv-SE', { timeZone: 'America/Mexico_City' }).replace(',', '').split(/\s+/)[0],
+            selectedDate: formatMXDate(new Date()).datePart,
             cajaTotalizada: 0,
             gastosTotales: 0,
             
@@ -730,8 +758,7 @@
                     const end = new Date(app.fecha_hora_fin);
 
                     try {
-                        const mxStr = start.toLocaleString('sv-SE', { timeZone: 'America/Mexico_City' });
-                        const [datePart, timePart] = mxStr.replace(',', '').split(/\s+/);
+                        const { datePart, timePart } = formatMXDate(start);
                         
                         if (datePart === state.selectedDate) {
                             const stylist = app.estilista_nombre;

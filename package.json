@@ -1,0 +1,9 @@
+{
+  "name": "topgreen-ecosystem-root",
+  "version": "1.0.0",
+  "description": "Root package runner to redirect Render builds to whatsapp-backend",
+  "scripts": {
+    "install": "cd whatsapp-backend && npm install",
+    "start": "cd whatsapp-backend && npm start"
+  }
+}
