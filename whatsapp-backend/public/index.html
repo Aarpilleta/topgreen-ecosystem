@@ -84,6 +84,19 @@
             </button>
         </div>
 
+        <!-- Unit Preference Toggle -->
+        <div class="flex flex-wrap items-center gap-2 bg-zinc-900/90 border border-zinc-800 p-1.5 rounded-xl">
+            <span class="text-[10px] font-mono uppercase text-zinc-500 px-2 flex items-center gap-1">
+                <i data-lucide="scale" class="h-3 w-3"></i> Unidad:
+            </span>
+            <button onclick="toggleGlobalUnit('oz')" id="unit-oz" class="px-3 py-1 rounded-lg text-xs font-mono transition-all duration-200 text-zinc-400 hover:text-white">
+                OZ (Onzas)
+            </button>
+            <button onclick="toggleGlobalUnit('g')" id="unit-g" class="px-3 py-1 rounded-lg text-xs font-mono transition-all duration-200 text-zinc-400 hover:text-white">
+                Gramos
+            </button>
+        </div>
+
         <div class="flex items-center space-x-4">
             <div class="flex items-center space-x-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs text-zinc-400">
                 <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -500,6 +513,7 @@
         const state = {
             activeTab: 'dashboard',
             currentUser: 'Tony',
+            unitPreference: localStorage.getItem('topgreen_unit_preference') || 'oz',
             selectedDate: new Date().toLocaleString('sv-SE', { timeZone: 'America/Mexico_City' }).replace(',', '').split(/\s+/)[0],
             cajaTotalizada: 0,
             gastosTotales: 0,
@@ -515,7 +529,8 @@
             // WhatsApp Console State
             chats: [],
             selectedChat: null,
-            messages: []
+            messages: [],
+            customCheckoutPrice: null
         };
 
         const hoursArray = ["11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
@@ -561,6 +576,73 @@
                 triggerToast(`Error de conexión al servidor en ${endpoint}`, 'error');
                 return null;
             }
+        }
+
+        function toggleGlobalUnit(unit, force = false) {
+            const oldUnit = state.unitPreference;
+            if (oldUnit === unit && !force) return;
+
+            state.unitPreference = unit;
+            localStorage.setItem('topgreen_unit_preference', unit);
+            
+            // Convert current input values if not forced
+            if (!force) {
+                const ozInput = document.getElementById('checkout-nanoplastia-oz');
+                const gramsInput = document.getElementById('checkout-tinte-grams');
+                
+                if (ozInput && ozInput.value) {
+                    const val = parseFloat(ozInput.value) || 0;
+                    if (val > 0) {
+                        if (unit === 'g') {
+                            ozInput.value = (val * 30).toFixed(1);
+                        } else {
+                            ozInput.value = (val / 30).toFixed(1);
+                        }
+                    }
+                }
+                
+                if (gramsInput && gramsInput.value) {
+                    const val = parseFloat(gramsInput.value) || 0;
+                    if (val > 0) {
+                        if (unit === 'g') {
+                            gramsInput.value = (val * 30).toFixed(1);
+                        } else {
+                            gramsInput.value = (val / 30).toFixed(1);
+                        }
+                    }
+                }
+            }
+            
+            // Update UI buttons
+            const btnOz = document.getElementById('unit-oz');
+            const btnG = document.getElementById('unit-g');
+            if (btnOz && btnG) {
+                if (unit === 'oz') {
+                    btnOz.className = "px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-zinc-950 font-black rounded-lg text-xs font-mono transition-all duration-200";
+                    btnG.className = "px-3 py-1 rounded-lg text-xs font-mono transition-all duration-200 text-zinc-400 hover:text-white";
+                } else {
+                    btnG.className = "px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-zinc-950 font-black rounded-lg text-xs font-mono transition-all duration-200";
+                    btnOz.className = "px-3 py-1 rounded-lg text-xs font-mono transition-all duration-200 text-zinc-400 hover:text-white";
+                }
+            }
+            
+            // Re-render components that display units
+            updatePOSInsumosFields();
+            renderInventoryModule();
+        }
+
+        function getInventoryStockFormatted(key, rawStock) {
+            if (state.unitPreference === 'oz' && (key === 'nanoplastia_elixir' || key === 'jade_tinte')) {
+                return (rawStock / 30).toFixed(1);
+            }
+            return rawStock;
+        }
+
+        function getInventoryUnitName(key) {
+            if (key === 'nanoplastia_elixir' || key === 'jade_tinte') {
+                return state.unitPreference === 'oz' ? 'OZ' : (key === 'nanoplastia_elixir' ? 'ml' : 'g');
+            }
+            return 'Pzs';
         }
 
         async function loadState() {
@@ -908,18 +990,29 @@
 
             Object.keys(state.inventory).forEach(key => {
                 const item = state.inventory[key];
+                const displayStock = getInventoryStockFormatted(key, item.stock);
+                const unit = getInventoryUnitName(key);
                 const isLow = item.stock < item.min;
+                
+                let displayName = item.name;
+                if (key === 'nanoplastia_elixir') {
+                    displayName = state.unitPreference === 'oz' ? 'Elixir Nanoplastia (OZ)' : 'Elixir Nanoplastia (ml)';
+                } else if (key === 'jade_tinte') {
+                    displayName = state.unitPreference === 'oz' ? 'Tinte Jade Green (OZ)' : 'Tinte Jade Green (g)';
+                }
+
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between p-2 bg-zinc-950/40 border border-zinc-850 rounded-lg";
                 div.innerHTML = `
-                    <div class="truncate pr-1">
-                        <span class="text-xs font-medium block text-zinc-300 truncate">${item.name}</span>
+                    <div class="truncate pr-1 flex flex-col">
+                        <span class="text-xs font-medium block text-zinc-300 truncate">${displayName}</span>
+                        <span class="text-[9px] font-mono text-zinc-500 font-bold uppercase">${unit}</span>
                     </div>
                     <div class="flex items-center space-x-1.5 shrink-0">
-                        <input type="number" value="${item.stock}" 
+                        <input type="number" step="${state.unitPreference === 'oz' && (key === 'nanoplastia_elixir' || key === 'jade_tinte') ? '0.1' : '1'}" value="${displayStock}" 
                             ${isRestricted ? 'disabled' : ''} 
                             onchange="modifyWarehouseStockItem('${key}', this.value)"
-                            class="w-12 bg-zinc-900 border border-zinc-800 text-center font-mono text-xs rounded py-0.5 ${isLow ? 'text-rose-400 border-rose-900/60 font-bold' : 'text-emerald-400'} ${isRestricted ? 'cursor-not-allowed opacity-60' : ''}">
+                            class="w-16 bg-zinc-900 border border-zinc-800 text-center font-mono text-xs rounded py-0.5 ${isLow ? 'text-rose-400 border-rose-900/60 font-bold' : 'text-emerald-400'} ${isRestricted ? 'cursor-not-allowed opacity-60' : ''}">
                     </div>
                 `;
                 container.appendChild(div);
@@ -936,7 +1029,12 @@
             const item = state.inventory[key];
             if (item) {
                 const old = item.stock;
-                const updatedVal = parseInt(val) || 0;
+                let updatedVal = parseFloat(val) || 0;
+                if (state.unitPreference === 'oz' && (key === 'nanoplastia_elixir' || key === 'jade_tinte')) {
+                    updatedVal = Math.round(updatedVal * 30);
+                } else {
+                    updatedVal = Math.round(updatedVal);
+                }
                 
                 await fetchAPI('/api/inventario/update', {
                     method: 'POST',
@@ -944,8 +1042,21 @@
                     body: JSON.stringify({ key_name: key, stock: updatedVal })
                 });
 
-                await pushAuditLog(`Almacén: Modificó stock de [${item.name}] de ${old} a ${updatedVal}.`);
-                loadState();
+                item.stock = updatedVal;
+
+                const displayValOld = getInventoryStockFormatted(key, old);
+                const displayValNew = getInventoryStockFormatted(key, updatedVal);
+                const unit = getInventoryUnitName(key);
+                
+                let displayName = item.name;
+                if (key === 'nanoplastia_elixir') {
+                    displayName = 'Elixir Nanoplastia';
+                } else if (key === 'jade_tinte') {
+                    displayName = 'Tinte Jade Green';
+                }
+
+                await pushAuditLog(`Almacén: Modificó stock de [${displayName}] de ${displayValOld} ${unit} a ${displayValNew} ${unit}.`);
+                renderInventoryModule();
             }
         }
 
@@ -1465,7 +1576,7 @@
                     }
                 }
 
-                handleCheckoutProductAddon();
+                handleCheckoutProductAddon(true);
                 document.getElementById('checkout-status-text').innerText = "Venta directa configurada.";
 
             } else {
@@ -1487,7 +1598,7 @@
                         selectChStylist.value = st;
                     }
                     
-                    handleCheckoutProductAddon();
+                    handleCheckoutProductAddon(true);
                     
                     if (app.status === 'Cobrado') {
                         document.getElementById('checkout-status-text').innerText = `La cita de ${app.customer} ya ha sido cobrada.`;
@@ -1536,17 +1647,50 @@
             }
             
             const normName = serviceName.toLowerCase();
+            const unit = state.unitPreference;
             
             if (normName.includes('nanoplastia')) {
                 insumosContainer.classList.remove('hidden');
                 ozBlock.classList.remove('hidden');
                 gramsBlock.classList.add('hidden');
                 if (gramsInput) gramsInput.value = "0.0";
-            } else if (normName.includes('tinte') || normName.includes('balayage') || normName.includes('luces') || normName.includes('babylight') || normName.includes('color') || normName.includes('matiz') || normName.includes('extracción')) {
+                
+                const ozLabel = ozBlock.querySelector('label');
+                if (unit === 'oz') {
+                    if (ozLabel) ozLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Onzas (OZ) Nanoplastia Usadas:`;
+                    ozInput.min = "0.0";
+                    ozInput.max = "10.0";
+                    ozInput.step = "0.1";
+                    ozInput.placeholder = "Rango 0.0 - 10.0";
+                } else {
+                    if (ozLabel) ozLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Gramos (g) Nanoplastia Usados:`;
+                    ozInput.min = "0.0";
+                    ozInput.max = "300.0";
+                    ozInput.step = "1";
+                    ozInput.placeholder = "Rango 0.0 - 300.0";
+                }
+                if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+            } else if (normName.includes('tinte') || normName.includes('balayage') || normName.includes('luces') || normName.includes('babylight') || normName.includes('color') || normName.includes('matiz') || normName.includes('extracción') || normName.includes('base permanente')) {
                 insumosContainer.classList.remove('hidden');
                 gramsBlock.classList.remove('hidden');
                 ozBlock.classList.add('hidden');
                 if (ozInput) ozInput.value = "0.0";
+                
+                const gramsLabel = gramsBlock.querySelector('label');
+                if (unit === 'oz') {
+                    if (gramsLabel) gramsLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Onzas (OZ) de Tinte Usadas:`;
+                    gramsInput.min = "0.0";
+                    gramsInput.max = "7.0";
+                    gramsInput.step = "0.1";
+                    gramsInput.placeholder = "Rango 0.0 - 7.0";
+                } else {
+                    if (gramsLabel) gramsLabel.innerHTML = `<i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Gramos (g) de Tinte Usados:`;
+                    gramsInput.min = "0.0";
+                    gramsInput.max = "200.0";
+                    gramsInput.step = "1";
+                    gramsInput.placeholder = "Rango 0.0 - 200.0";
+                }
+                if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
             } else {
                 insumosContainer.classList.add('hidden');
                 ozBlock.classList.add('hidden');
@@ -1557,6 +1701,7 @@
         }
 
         function handleCheckoutAppSelection() {
+            state.customCheckoutPrice = null;
             const selectApp = document.getElementById('checkout-appointment-select');
             const selectSrv = document.getElementById('checkout-service-select');
             const selectChStylist = document.getElementById('checkout-stylist-select');
@@ -1637,6 +1782,7 @@
         }
 
         function handleCheckoutServiceChange() {
+            state.customCheckoutPrice = null;
             const id = document.getElementById('checkout-service-select').value;
             const srv = state.services.find(s => s.id == id);
             if (srv) {
@@ -1647,7 +1793,14 @@
             }
         }
 
-        function handleCheckoutProductAddon() {
+        function handleCheckoutProductAddon(isAuto = false) {
+            if (!isAuto) {
+                state.customCheckoutPrice = null;
+            }
+            if (state.customCheckoutPrice !== null) {
+                document.getElementById('checkout-amount-display').value = state.customCheckoutPrice;
+                return;
+            }
             const target = document.getElementById('checkout-appointment-select').value;
             const addonKey = document.getElementById('checkout-product-addon').value;
             
@@ -1749,33 +1902,53 @@
 
             // Consume inventory materials for service
             const matchedService = state.services.find(s => s.name === serviceName);
-            let ozUsed = 0;
-            let gramsUsed = 0;
+            let productCost = 0;
+            let qtyToDeduct = 0;
             const normSrvName = serviceName.toLowerCase();
+            const unit = state.unitPreference;
+            
             if (normSrvName.includes('nanoplastia')) {
                 const ozInput = document.getElementById('checkout-nanoplastia-oz');
-                ozUsed = ozInput ? parseFloat(ozInput.value) || 0 : 0;
-                if (isNaN(ozUsed) || ozUsed < 0 || ozUsed > 10) {
-                    triggerToast("Ingrese un valor de onzas de Nanoplastia entre 0.0 y 10.0", "error");
-                    return;
+                const insumoVal = ozInput ? parseFloat(ozInput.value) || 0 : 0;
+                
+                if (unit === 'oz') {
+                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 10) {
+                        triggerToast("Ingrese un valor de onzas de Nanoplastia entre 0.0 y 10.0", "error");
+                        return;
+                    }
+                    productCost = insumoVal * 100;
+                    qtyToDeduct = Math.round(insumoVal * 30);
+                } else {
+                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 300) {
+                        triggerToast("Ingrese un valor de gramos de Nanoplastia entre 0.0 y 300.0", "error");
+                        return;
+                    }
+                    productCost = insumoVal * (100 / 30);
+                    qtyToDeduct = Math.round(insumoVal);
                 }
             } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
                 const gramsInput = document.getElementById('checkout-tinte-grams');
-                gramsUsed = gramsInput ? parseFloat(gramsInput.value) || 0 : 0;
-                if (isNaN(gramsUsed) || gramsUsed < 0 || gramsUsed > 200) {
-                    triggerToast("Ingrese un valor de gramos de tinte entre 0.0 y 200.0", "error");
-                    return;
+                const insumoVal = gramsInput ? parseFloat(gramsInput.value) || 0 : 0;
+                
+                if (unit === 'oz') {
+                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 7) {
+                        triggerToast("Ingrese un valor de onzas de tinte entre 0.0 y 7.0", "error");
+                        return;
+                    }
+                    productCost = insumoVal * 120; // 4 * 30
+                    qtyToDeduct = Math.round(insumoVal * 30);
+                } else {
+                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 200) {
+                        triggerToast("Ingrese un valor de gramos de tinte entre 0.0 y 200.0", "error");
+                        return;
+                    }
+                    productCost = insumoVal * 4;
+                    qtyToDeduct = Math.round(insumoVal);
                 }
             }
 
             if (matchedService && matchedService.stockKey) {
                 const item = state.inventory[matchedService.stockKey];
-                let qtyToDeduct = matchedService.stockQty;
-                if (matchedService.stockKey === 'nanoplastia_elixir') {
-                    qtyToDeduct = Math.round(ozUsed * 29.5735);
-                } else if (matchedService.stockKey === 'jade_tinte') {
-                    qtyToDeduct = Math.round(gramsUsed);
-                }
                 if (item.stock >= qtyToDeduct) {
                     await fetchAPI('/api/inventario/update', {
                         method: 'POST',
@@ -1790,10 +1963,8 @@
             // Algoritmo de Comisiones Blindadas
             let svcComm = 0;
             if (normSrvName.includes('nanoplastia')) {
-                const productCost = ozUsed * 100;
                 svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
             } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
-                const productCost = gramsUsed * 4;
                 svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
             } else if (normSrvName.includes('uña') || normSrvName.includes('man-ped')) {
                 svcComm = Math.round(basePrice * 0.45);
@@ -1839,6 +2010,7 @@
             document.getElementById('checkout-nanoplastia-oz').value = "0.0";
             document.getElementById('checkout-tinte-grams').value = "0.0";
             document.getElementById('checkout-insumos-container').classList.add('hidden');
+            state.customCheckoutPrice = null;
             loadState();
         }
 
@@ -2243,6 +2415,15 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             switchUser('Tony', true);
+            
+            const amtDisplay = document.getElementById('checkout-amount-display');
+            if (amtDisplay) {
+                amtDisplay.addEventListener('input', (e) => {
+                    state.customCheckoutPrice = e.target.value;
+                });
+            }
+            
+            toggleGlobalUnit(state.unitPreference, true);
             loadState();
         });
     </script>
