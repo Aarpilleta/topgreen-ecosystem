@@ -285,16 +285,11 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
 ], '#14b8a6', true),
 
 ('Lizbeth', ARRAY[
-  'Cejas pelo a pelo', 'Delineado de cejas', 'Delineado de ojos', 'Delineado dentro de ojos', 'Relleno de labios',
-  'Maquillaje', 'Planchado de cejas', 'Planchado de ceja c/n henna', 'Henna c/n depilación', 'Henna ceja'
+  'Cejas pelo a pelo', 'Delineado de cejas', 'Delineado de ojos', 'Delineado dentro de ojos', 'Relleno de labios'
 ], '#d97706', true),
 
 ('Fran', ARRAY[
-  'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
-  'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
-  'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
-  'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
-  'Ampolleta Hidratación', 'Ampolleta Reparación'
+  'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero'
 ], '#6366f1', true)
 
 -- Insert Inventario
