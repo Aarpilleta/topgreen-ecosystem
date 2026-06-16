@@ -255,6 +255,12 @@
                                     <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Estilista Responsable:</label>
                                     <select id="checkout-stylist-select" onchange="handlePOSStylistChange()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none font-sans"></select>
                                 </div>
+                                <div id="checkout-nanoplastia-oz-container" class="hidden">
+                                    <label class="text-[9px] uppercase font-mono text-amber-500 block mb-1 flex items-center gap-1">
+                                        <i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Onzas (OZ) Nanoplastia Usadas:
+                                    </label>
+                                    <input type="number" id="checkout-nanoplastia-oz" min="0.0" max="10.0" step="0.1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" placeholder="Rango 0.0 - 10.0">
+                                </div>
                             </div>
 
                             <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-850 flex flex-col justify-between space-y-2">
@@ -1495,6 +1501,39 @@
             }
 
             validateCheckoutSubmitButton();
+            checkNanoplastiaFieldsVisibility();
+        }
+
+        function checkNanoplastiaFieldsVisibility() {
+            const selectApp = document.getElementById('checkout-appointment-select');
+            const selectSrv = document.getElementById('checkout-service-select');
+            const ozContainer = document.getElementById('checkout-nanoplastia-oz-container');
+            const ozInput = document.getElementById('checkout-nanoplastia-oz');
+            
+            if (!selectApp || !selectSrv || !ozContainer || !ozInput) return;
+            
+            let isNanoplastia = false;
+            const target = selectApp.value;
+            if (target === 'direct') {
+                const srv = state.services.find(s => s.id == selectSrv.value);
+                if (srv && srv.name.toLowerCase().includes('nanoplastia')) {
+                    isNanoplastia = true;
+                }
+            } else {
+                const [st, hr] = target.split('|');
+                const sched = getActiveSchedule();
+                const app = sched[st] ? sched[st][hr] : null;
+                if (app && app.service && app.service.toLowerCase().includes('nanoplastia')) {
+                    isNanoplastia = true;
+                }
+            }
+            
+            if (isNanoplastia) {
+                ozContainer.classList.remove('hidden');
+            } else {
+                ozContainer.classList.add('hidden');
+                ozInput.value = "0.0";
+            }
         }
 
         function handleCheckoutAppSelection() {
@@ -1544,6 +1583,7 @@
                 }
             }
             validateCheckoutSubmitButton();
+            checkNanoplastiaFieldsVisibility();
         }
 
         function handlePaymentMethodChange() {
@@ -1583,6 +1623,7 @@
                 document.getElementById('checkout-amount-display').value = srv.price.toLocaleString('es-MX', {minimumFractionDigits: 2});
                 document.getElementById('checkout-status-text').innerText = "Venta directa configurada.";
                 validateCheckoutSubmitButton();
+                checkNanoplastiaFieldsVisibility();
             }
         }
 
@@ -1679,13 +1720,28 @@
 
             // Consume inventory materials for service
             const matchedService = state.services.find(s => s.name === serviceName);
+            let ozUsed = 0;
+            const normSrvName = serviceName.toLowerCase();
+            if (normSrvName.includes('nanoplastia')) {
+                const ozInput = document.getElementById('checkout-nanoplastia-oz');
+                ozUsed = ozInput ? parseFloat(ozInput.value) || 0 : 0;
+                if (isNaN(ozUsed) || ozUsed < 0 || ozUsed > 10) {
+                    triggerToast("Ingrese un valor de onzas de Nanoplastia entre 0.0 y 10.0", "error");
+                    return;
+                }
+            }
+
             if (matchedService && matchedService.stockKey) {
                 const item = state.inventory[matchedService.stockKey];
-                if (item.stock >= matchedService.stockQty) {
+                let qtyToDeduct = matchedService.stockQty;
+                if (matchedService.stockKey === 'nanoplastia_elixir') {
+                    qtyToDeduct = Math.round(ozUsed * 29.5735);
+                }
+                if (item.stock >= qtyToDeduct) {
                     await fetchAPI('/api/inventario/update', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key_name: matchedService.stockKey, stock: item.stock - matchedService.stockQty })
+                        body: JSON.stringify({ key_name: matchedService.stockKey, stock: item.stock - qtyToDeduct })
                     });
                 }
             }
@@ -1694,9 +1750,8 @@
             
             // Algoritmo de Comisiones Blindadas
             let svcComm = 0;
-            const normSrvName = serviceName.toLowerCase();
             if (normSrvName.includes('nanoplastia')) {
-                const productCost = 1000;
+                const productCost = ozUsed * 100;
                 svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
             } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage')) {
                 const productCost = 300;
@@ -1742,6 +1797,8 @@
 
             triggerToast(`Transacción validada por $${finalTotal} MXN.`, "success");
             document.getElementById('checkout-appointment-select').value = "direct";
+            document.getElementById('checkout-nanoplastia-oz').value = "0.0";
+            document.getElementById('checkout-nanoplastia-oz-container').classList.add('hidden');
             loadState();
         }
 

@@ -120,30 +120,182 @@ EXECUTE FUNCTION calcular_fecha_hora_fin();
 
 -- Insert Servicios
 INSERT INTO servicios (nombre, duracion_minutos, precio_fijo) VALUES
-('Nanoplastia Premium', 300, 3200.00),
-('Balayage Premium', 300, 2100.00),
-('Corte Premium', 60, 800.00),
-('Tinte de Cobertura', 120, 1200.00),
-('Botox Capilar', 90, 850.00),
-('Depilación IPL', 60, 3200.00),
-('Uñas', 90, 400.00),
-('Pestañas', 90, 600.00),
-('Lifting', 60, 500.00),
-('Maquillaje', 60, 1200.00),
-('Microblading', 180, 4800.00),
-('Micropigmentación', 180, 5500.00);
+-- CORTES
+('Cortes dama o niña', 60, 380.00),
+('Cortes caballero o niño', 45, 250.00),
+('Contorno caballero', 30, 100.00),
+('Corte fleco', 30, 100.00),
+('Barba caballero', 30, 150.00),
+-- COLOR/TINTE
+('Efectos de color', 180, 1200.00),
+('Tinte completo', 120, 800.00),
+('Retoque de tinte', 90, 650.00),
+('Matiz', 60, 450.00),
+('Balayage', 240, 2200.00),
+('Babylight', 240, 1800.00),
+('Luces', 180, 1300.00),
+('Extracción de color', 120, 800.00),
+('Base permanente', 120, 800.00),
+-- PEINADOS
+('Peinado tenaza ondulado', 60, 280.00),
+('Alto peinado chongo', 90, 550.00),
+('Secado/brushing', 45, 200.00),
+('Medio recogido', 60, 450.00),
+-- TRATAMIENTOS
+('Mascarilla capilar', 45, 350.00),
+('Botox capilar', 90, 850.00),
+('Nanoplastia', 180, 1800.00),
+('Mucota & detox', 90, 600.00),
+-- UÑAS
+('Esmaltado manos & pies', 30, 100.00),
+('Gelish', 45, 150.00),
+('Gelish c/n rubber', 60, 350.00),
+('Retoque rubber c/n gelish', 60, 300.00),
+('Rubber', 45, 250.00),
+('Retoque rubber', 45, 200.00),
+('Gelish francés', 60, 200.00),
+('Retiro de gelish & rubber', 30, 100.00),
+('Press on', 60, 500.00),
+('Uñas acrílicas', 90, 450.00),
+('Uñas acrílicas c/n gelish', 120, 550.00),
+('Uñas esculturales', 120, 500.00),
+('Poly gel', 90, 500.00),
+('Retoque de poly gel', 60, 350.00),
+('Uñas tip', 90, 500.00),
+('Retoque esculturales', 60, 350.00),
+('Retoque acrílico', 60, 350.00),
+('Retoque uñas tip', 60, 350.00),
+('Retoque press on', 60, 350.00),
+('Manicura', 45, 200.00),
+('Manicura c/n esmaltado', 60, 260.00),
+('Manicura ruso', 45, 260.00),
+('Manicura ruso c/n esmalte', 60, 290.00),
+('Pedicura', 60, 300.00),
+('Pedicura c/n esmaltado', 75, 300.00),
+('Pedicura ruso', 60, 350.00),
+('Pedicura ruso c/n esmalte', 75, 400.00),
+('Retiro esculturales', 30, 150.00),
+('Retiro acrílico', 30, 150.00),
+-- CEJAS & MAQUILLAJE
+('Maquillaje', 60, 750.00),
+('Planchado de cejas', 45, 250.00),
+('Planchado de ceja c/n henna', 60, 450.00),
+('Henna c/n depilación', 45, 250.00),
+('Henna ceja', 30, 150.00),
+-- DEPILACIÓN IPL
+('Espalda completa (IPL)', 60, 4800.00),
+('Media espalda (IPL)', 45, 3200.00),
+('Brazos (IPL) - $3200', 45, 3200.00),
+('Abdomen (IPL)', 45, 3200.00),
+('Piernas completas (IPL)', 60, 5200.00),
+('Media pierna (IPL)', 45, 3200.00),
+('Brazos (IPL) - $3800', 45, 3800.00),
+('Bigote (IPL)', 30, 3000.00),
+('Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 120, 12800.00),
+('Paquete IPL: Axilas, piernas, bikini y area gluteal', 120, 12800.00),
+('Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)', 60, 5500.00),
+-- PESTAÑAS
+('Pestañas volumen', 120, 1400.00),
+('Efecto rimel', 90, 800.00),
+('Extensiones clásicas', 90, 1000.00),
+('Extensiones híbridas', 120, 1200.00),
+('Retoque clásicas', 60, 450.00),
+('Retoque efecto rímel', 60, 400.00),
+('Retoque híbrida', 60, 500.00),
+('Retoque volumen', 75, 650.00),
+('Retiro pestañas', 30, 100.00),
+('Pestañas de tira', 30, 150.00),
+('Lifting de pestañas', 60, 650.00),
+('Lifting de pestañas/tinta', 75, 800.00),
+-- FACIALES
+('Limpieza profunda', 60, 450.00),
+('Humectación', 45, 450.00),
+-- AMPOLLETAS
+('Ampolleta Hidratación', 30, 200.00),
+('Ampolleta Reparación', 30, 200.00),
+-- MICROPIGMENTACIÓN
+('Cejas pelo a pelo', 180, 4850.00),
+('Delineado de cejas', 180, 4850.00),
+('Delineado de ojos', 120, 4850.00),
+('Delineado dentro de ojos', 120, 4850.00),
+('Relleno de labios', 180, 5500.00),
+-- DEPILACIÓN CERA
+('Depilación Cera Abdomen', 30, 350.00),
+('Depilación Cera Axila', 20, 150.00),
+('Depilación Cera Bozo o mentón', 15, 100.00),
+('Depilación Cera Brazo', 30, 350.00),
+('Depilación Cera Cejas', 20, 150.00),
+('Diseño de cejas (Cera)', 30, 200.00),
+('Depilación Cera Espalda completa', 45, 450.00),
+('Depilación Cera Bikini', 30, 350.00),
+('Depilación Cera Ingles', 30, 350.00),
+('Depilación Cera Linea central abdomen', 20, 200.00),
+('Depilación Cera Media espalda', 30, 450.00),
+('Depilación Cera Pierna completa', 45, 600.00),
+('Depilación Cera Media pierna', 30, 300.00),
+('Depilación Cera Patillas', 20, 150.00),
+('Cara completa (Cera)', 45, 500.00);
 
 -- Insert Estilistas
 INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
-('Pili', ARRAY['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], '#10b981', true),
-('Joel', ARRAY['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], '#3b82f6', true),
-('Rose', ARRAY['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Depilación IPL', 'Pestañas', 'Lifting', 'Maquillaje', 'Botox Capilar'], '#a855f7', true),
-('Majo', ARRAY['Uñas', 'Pestañas'], '#ec4899', true),
-('Cande', ARRAY['Uñas'], '#f43f5e', true),
-('Judith', ARRAY['Uñas'], '#f59e0b', true),
-('Laura', ARRAY['Uñas'], '#14b8a6', true),
-('Lizbeth', ARRAY['Microblading', 'Micropigmentación'], '#d97706', true),
-('Fran', ARRAY['Corte Premium'], '#6366f1', true);
+('Pili', ARRAY[
+  'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+  'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+  'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
+  'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
+  'Ampolleta Hidratación', 'Ampolleta Reparación'
+], '#10b981', true),
+
+('Joel', ARRAY[
+  'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+  'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+  'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
+  'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
+  'Ampolleta Hidratación', 'Ampolleta Reparación'
+], '#3b82f6', true),
+
+('Rose', ARRAY[
+  'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+  'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+  'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
+  'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
+  'Ampolleta Hidratación', 'Ampolleta Reparación',
+  'Pestañas volumen', 'Efecto rimel', 'Extensiones clásicas', 'Extensiones híbridas', 'Retoque clásicas', 'Retoque efecto rímel', 'Retoque híbrida', 'Retoque volumen', 'Retiro pestañas', 'Pestañas de tira', 'Lifting de pestañas', 'Lifting de pestañas/tinta',
+  'Espalda completa (IPL)', 'Media espalda (IPL)', 'Brazos (IPL) - $3200', 'Abdomen (IPL)', 'Piernas completas (IPL)', 'Media pierna (IPL)', 'Brazos (IPL) - $3800', 'Bigote (IPL)', 'Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 'Paquete IPL: Axilas, piernas, bikini y area gluteal', 'Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)',
+  'Depilación Cera Abdomen', 'Depilación Cera Axila', 'Depilación Cera Bozo o mentón', 'Depilación Cera Brazo', 'Depilación Cera Cejas', 'Diseño de cejas (Cera)', 'Depilación Cera Espalda completa', 'Depilación Cera Bikini', 'Depilación Cera Ingles', 'Depilación Cera Linea central abdomen', 'Depilación Cera Media espalda', 'Depilación Cera Pierna completa', 'Depilación Cera Media pierna', 'Depilación Cera Patillas', 'Cara completa (Cera)',
+  'Maquillaje', 'Planchado de cejas', 'Planchado de ceja c/n henna', 'Henna c/n depilación', 'Henna ceja'
+], '#a855f7', true),
+
+('Majo', ARRAY[
+  'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
+  'Pestañas volumen', 'Efecto rimel', 'Extensiones clásicas', 'Extensiones híbridas', 'Retoque clásicas', 'Retoque efecto rímel', 'Retoque híbrida', 'Retoque volumen', 'Retiro pestañas', 'Pestañas de tira', 'Lifting de pestañas', 'Lifting de pestañas/tinta',
+  'Limpieza profunda', 'Humectación'
+], '#ec4899', true),
+
+('Cande', ARRAY[
+  'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico'
+], '#f43f5e', true),
+
+('Judith', ARRAY[
+  'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico'
+], '#f59e0b', true),
+
+('Laura', ARRAY[
+  'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico'
+], '#14b8a6', true),
+
+('Lizbeth', ARRAY[
+  'Cejas pelo a pelo', 'Delineado de cejas', 'Delineado de ojos', 'Delineado dentro de ojos', 'Relleno de labios',
+  'Maquillaje', 'Planchado de cejas', 'Planchado de ceja c/n henna', 'Henna c/n depilación', 'Henna ceja'
+], '#d97706', true),
+
+('Fran', ARRAY[
+  'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+  'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+  'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
+  'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
+  'Ampolleta Hidratación', 'Ampolleta Reparación'
+], '#6366f1', true)
 
 -- Insert Inventario
 INSERT INTO inventario (key_name, nombre, stock, min, cost_per_unit, price, item_type) VALUES
