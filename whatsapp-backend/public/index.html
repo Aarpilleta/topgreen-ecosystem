@@ -255,20 +255,28 @@
                                     <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Estilista Responsable:</label>
                                     <select id="checkout-stylist-select" onchange="handlePOSStylistChange()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none font-sans"></select>
                                 </div>
-                                <div id="checkout-nanoplastia-oz-container" class="hidden">
-                                    <label class="text-[9px] uppercase font-mono text-amber-500 block mb-1 flex items-center gap-1">
-                                        <i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Onzas (OZ) Nanoplastia Usadas:
-                                    </label>
-                                    <input type="number" id="checkout-nanoplastia-oz" min="0.0" max="10.0" step="0.1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" placeholder="Rango 0.0 - 10.0">
+                                <div id="checkout-insumos-container" class="hidden space-y-3">
+                                    <div id="checkout-oz-block" class="hidden">
+                                        <label class="text-[9px] uppercase font-mono text-amber-500 block mb-1 flex items-center gap-1">
+                                            <i data-lucide="droplet" class="h-3 w-3 text-amber-500"></i> Onzas (OZ) Nanoplastia Usadas:
+                                        </label>
+                                        <input type="number" id="checkout-nanoplastia-oz" min="0.0" max="10.0" step="0.1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" placeholder="Rango 0.0 - 10.0">
+                                    </div>
+                                    <div id="checkout-grams-block" class="hidden">
+                                        <label class="text-[9px] uppercase font-mono text-violet-400 block mb-1 flex items-center gap-1">
+                                            <i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Gramos (g) de Tinte Usados:
+                                        </label>
+                                        <input type="number" id="checkout-tinte-grams" min="0.0" max="200.0" step="1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono" placeholder="Rango 0.0 - 200.0">
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-850 flex flex-col justify-between space-y-2">
                                 <div>
-                                    <span class="text-[9px] font-mono text-zinc-500 uppercase block mb-1">Monto de Liquidación Protegido</span>
+                                    <span class="text-[9px] font-mono text-zinc-500 uppercase block mb-1">Monto de Liquidación</span>
                                     <div class="relative">
                                         <span class="absolute left-2.5 top-1.5 text-zinc-650 text-xs font-mono">$</span>
-                                        <input type="text" id="checkout-amount-display" disabled class="w-full bg-zinc-900 border border-zinc-800 rounded py-1 pl-5 pr-10 text-xs text-zinc-350 cursor-not-allowed font-mono font-bold">
+                                        <input type="text" id="checkout-amount-display" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded py-1 pl-5 pr-10 text-xs text-white font-mono font-bold focus:outline-none">
                                         <span class="absolute right-2.5 top-1.5 text-[9px] text-zinc-605 font-mono">MXN</span>
                                     </div>
                                 </div>
@@ -1501,38 +1509,50 @@
             }
 
             validateCheckoutSubmitButton();
-            checkNanoplastiaFieldsVisibility();
+            updatePOSInsumosFields();
         }
 
-        function checkNanoplastiaFieldsVisibility() {
+        function updatePOSInsumosFields() {
             const selectApp = document.getElementById('checkout-appointment-select');
             const selectSrv = document.getElementById('checkout-service-select');
-            const ozContainer = document.getElementById('checkout-nanoplastia-oz-container');
+            const insumosContainer = document.getElementById('checkout-insumos-container');
+            const ozBlock = document.getElementById('checkout-oz-block');
+            const gramsBlock = document.getElementById('checkout-grams-block');
             const ozInput = document.getElementById('checkout-nanoplastia-oz');
+            const gramsInput = document.getElementById('checkout-tinte-grams');
             
-            if (!selectApp || !selectSrv || !ozContainer || !ozInput) return;
+            if (!selectApp || !selectSrv || !insumosContainer || !ozBlock || !gramsBlock) return;
             
-            let isNanoplastia = false;
+            let serviceName = "";
             const target = selectApp.value;
             if (target === 'direct') {
                 const srv = state.services.find(s => s.id == selectSrv.value);
-                if (srv && srv.name.toLowerCase().includes('nanoplastia')) {
-                    isNanoplastia = true;
-                }
+                serviceName = srv ? srv.name : "";
             } else {
                 const [st, hr] = target.split('|');
                 const sched = getActiveSchedule();
                 const app = sched[st] ? sched[st][hr] : null;
-                if (app && app.service && app.service.toLowerCase().includes('nanoplastia')) {
-                    isNanoplastia = true;
-                }
+                serviceName = app ? app.service : "";
             }
             
-            if (isNanoplastia) {
-                ozContainer.classList.remove('hidden');
+            const normName = serviceName.toLowerCase();
+            
+            if (normName.includes('nanoplastia')) {
+                insumosContainer.classList.remove('hidden');
+                ozBlock.classList.remove('hidden');
+                gramsBlock.classList.add('hidden');
+                if (gramsInput) gramsInput.value = "0.0";
+            } else if (normName.includes('tinte') || normName.includes('balayage') || normName.includes('luces') || normName.includes('babylight') || normName.includes('color') || normName.includes('matiz') || normName.includes('extracción')) {
+                insumosContainer.classList.remove('hidden');
+                gramsBlock.classList.remove('hidden');
+                ozBlock.classList.add('hidden');
+                if (ozInput) ozInput.value = "0.0";
             } else {
-                ozContainer.classList.add('hidden');
-                ozInput.value = "0.0";
+                insumosContainer.classList.add('hidden');
+                ozBlock.classList.add('hidden');
+                gramsBlock.classList.add('hidden');
+                if (ozInput) ozInput.value = "0.0";
+                if (gramsInput) gramsInput.value = "0.0";
             }
         }
 
@@ -1583,7 +1603,7 @@
                 }
             }
             validateCheckoutSubmitButton();
-            checkNanoplastiaFieldsVisibility();
+            updatePOSInsumosFields();
         }
 
         function handlePaymentMethodChange() {
@@ -1623,7 +1643,7 @@
                 document.getElementById('checkout-amount-display').value = srv.price.toLocaleString('es-MX', {minimumFractionDigits: 2});
                 document.getElementById('checkout-status-text').innerText = "Venta directa configurada.";
                 validateCheckoutSubmitButton();
-                checkNanoplastiaFieldsVisibility();
+                updatePOSInsumosFields();
             }
         }
 
@@ -1718,15 +1738,32 @@
                 }
             }
 
+            // Read entered total and extract base service price
+            const totalInputVal = document.getElementById('checkout-amount-display').value;
+            const enteredTotal = parseFloat(totalInputVal.replace(/[^0-9.]/g, '')) || 0;
+            if (enteredTotal <= 0) {
+                triggerToast("Ingrese un monto de liquidación válido.", "error");
+                return;
+            }
+            basePrice = Math.max(0, enteredTotal - extraPrice);
+
             // Consume inventory materials for service
             const matchedService = state.services.find(s => s.name === serviceName);
             let ozUsed = 0;
+            let gramsUsed = 0;
             const normSrvName = serviceName.toLowerCase();
             if (normSrvName.includes('nanoplastia')) {
                 const ozInput = document.getElementById('checkout-nanoplastia-oz');
                 ozUsed = ozInput ? parseFloat(ozInput.value) || 0 : 0;
                 if (isNaN(ozUsed) || ozUsed < 0 || ozUsed > 10) {
                     triggerToast("Ingrese un valor de onzas de Nanoplastia entre 0.0 y 10.0", "error");
+                    return;
+                }
+            } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
+                const gramsInput = document.getElementById('checkout-tinte-grams');
+                gramsUsed = gramsInput ? parseFloat(gramsInput.value) || 0 : 0;
+                if (isNaN(gramsUsed) || gramsUsed < 0 || gramsUsed > 200) {
+                    triggerToast("Ingrese un valor de gramos de tinte entre 0.0 y 200.0", "error");
                     return;
                 }
             }
@@ -1736,6 +1773,8 @@
                 let qtyToDeduct = matchedService.stockQty;
                 if (matchedService.stockKey === 'nanoplastia_elixir') {
                     qtyToDeduct = Math.round(ozUsed * 29.5735);
+                } else if (matchedService.stockKey === 'jade_tinte') {
+                    qtyToDeduct = Math.round(gramsUsed);
                 }
                 if (item.stock >= qtyToDeduct) {
                     await fetchAPI('/api/inventario/update', {
@@ -1753,8 +1792,8 @@
             if (normSrvName.includes('nanoplastia')) {
                 const productCost = ozUsed * 100;
                 svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
-            } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage')) {
-                const productCost = 300;
+            } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
+                const productCost = gramsUsed * 4;
                 svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
             } else if (normSrvName.includes('uña') || normSrvName.includes('man-ped')) {
                 svcComm = Math.round(basePrice * 0.45);
@@ -1798,7 +1837,8 @@
             triggerToast(`Transacción validada por $${finalTotal} MXN.`, "success");
             document.getElementById('checkout-appointment-select').value = "direct";
             document.getElementById('checkout-nanoplastia-oz').value = "0.0";
-            document.getElementById('checkout-nanoplastia-oz-container').classList.add('hidden');
+            document.getElementById('checkout-tinte-grams').value = "0.0";
+            document.getElementById('checkout-insumos-container').classList.add('hidden');
             loadState();
         }
 
