@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-zinc-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOP GREEN | Premium Management Workspace</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Outfit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'glow-emerald': '0 0 20px -3px rgba(16, 185, 129, 0.3)',
+                        'glow-amber': '0 0 15px -3px rgba(245, 158, 11, 0.2)',
+                        'glow-primary': '0 0 20px -5px rgba(16, 185, 129, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #18181b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #27272a; }
+        
+        .bg-stripes-green {
+            background-image: repeating-linear-gradient(45deg, #022c22 0px, #022c22 10px, #064e3b 10px, #064e3b 20px);
+            background-size: 28px 28px;
+        }
+        .bg-stripes-pending {
+            background-image: repeating-linear-gradient(45deg, #18181b 0px, #18181b 10px, #27272a 10px, #27272a 20px);
+            background-size: 28px 28px;
+        }
+    </style>
+</head>
+<body class="h-full text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200 antialiased overflow-y-auto">
+    
+    <!-- Header with Authenticated Roles & Navigation -->
+    <header class="border-b border-zinc-800 bg-zinc-950 px-6 py-4 flex flex-col lg:flex-row items-center justify-between gap-4 sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="h-9 w-9 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <i data-lucide="leaf" class="h-5 w-5 text-zinc-950 stroke-[2.5]"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-zinc-100">TOP GREEN</h1>
+                <p class="text-[10px] text-emerald-500/70 font-mono tracking-widest uppercase">Secure Enterprise Ledger // Reactive Stack</p>
+            </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800/80">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-zinc-950 shadow-md">
+                <i data-lucide="layout-dashboard" class="h-3.5 w-3.5"></i>
+                <span>Agenda y POS</span>
+            </button>
+            <button onclick="switchTab('whatsapp')" id="tab-whatsapp" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-zinc-400 hover:text-white">
+                <i data-lucide="message-square" class="h-3.5 w-3.5"></i>
+                <span>Consola WhatsApp</span>
+            </button>
+        </div>
+        
+        <!-- Authentication Credentials -->
+        <div class="flex flex-wrap items-center gap-2 bg-zinc-900/90 border border-zinc-800 p-1.5 rounded-xl">
+            <span class="text-[10px] font-mono uppercase text-zinc-500 px-2 flex items-center gap-1">
+                <i data-lucide="user-cog" class="h-3 w-3"></i> Autenticado:
+            </span>
+            <button onclick="switchUser('Tony')" id="role-Tony" class="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 text-zinc-400 hover:text-white">
+                Tony (Dueña)
+            </button>
+            <button onclick="switchUser('Recepción')" id="role-Recepción" class="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 text-zinc-400 hover:text-white">
+                Recepción
+            </button>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs text-zinc-400">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-mono text-[11px]" id="live-timer">08/06/2026 14:42:00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed top-24 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+        
+        <!-- TAB 1: OPERATIVE & POS DASHBOARD -->
+        <div id="tab-content-dashboard" class="space-y-6">
+            <!-- Metrics Cards Dashboard -->
+            <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Citas Activas -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                    <span class="text-xs text-zinc-400 block mb-1">Citas Activas</span>
+                    <div class="flex items-baseline justify-between">
+                        <span class="text-2xl font-bold font-mono text-white" id="stat-citas">0</span>
+                        <span id="calendar-day-badge" class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono">08 JUN</span>
+                    </div>
+                </div>
+                
+                <!-- Caja Comercial (Bruto) -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                    <span class="text-xs text-zinc-400 block mb-1">Caja Comercial (Bruto)</span>
+                    <span class="text-2xl font-bold font-mono text-emerald-400 block" id="stat-caja">$0</span>
+                </div>
+                
+                <!-- Gastos Operativos (Insumos) -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                    <span class="text-xs text-zinc-400 block mb-1">Gastos Operativos (Insumos)</span>
+                    <span class="text-2xl font-bold font-mono text-rose-500 block" id="stat-gastos">$0</span>
+                </div>
+                
+                <!-- Flujo Neto Recaudado -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                    <span class="text-xs text-zinc-400 block mb-1 font-medium">Flujo Neto Recaudado</span>
+                    <span class="text-2xl font-bold font-mono text-teal-400 block" id="stat-neto">$0</span>
+                </div>
+            </section>
+
+            <!-- Main Workspace Grid -->
+            <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Side Panels -->
+                <div class="lg:col-span-4 space-y-6">
+                    <!-- Monthly Calendar -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Calendario</span>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="navigateMonth(-1)" class="p-1 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded transition-all flex items-center justify-center">
+                                    <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                                </button>
+                                <span id="calendar-month-year" class="text-xs font-mono font-bold text-emerald-400">JUNIO 2026</span>
+                                <button onclick="navigateMonth(1)" class="p-1 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded transition-all flex items-center justify-center">
+                                    <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center font-mono text-[9px] text-zinc-500 uppercase font-bold mb-1">
+                            <div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sá</div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1" id="monthly-calendar-grid"></div>
+                    </div>
+
+                    <!-- Stock Control Panel -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2 border-b border-zinc-800 pb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1">
+                                <i data-lucide="package" class="h-4 w-4 text-emerald-400"></i> Control de Almacén
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span id="stat-inventory-alerts"></span>
+                                <div id="stock-edit-badge" class="text-[8px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono">EDITABLE</div>
+                            </div>
+                        </div>
+                        <div class="space-y-2" id="inventory-list-box"></div>
+                    </div>
+
+                    <!-- Service pricing tariff -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2 border-b border-zinc-800 pb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Tarifas de Servicios</span>
+                        </div>
+                        <div class="space-y-2 max-h-[150px] overflow-y-auto" id="services-rates-box"></div>
+                    </div>
+                </div>
+
+                <!-- Daily Scheduler Grid -->
+                <div class="lg:col-span-8 bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-zinc-800 pb-3 mb-4 gap-4">
+                        <div>
+                            <h2 class="text-sm font-bold text-zinc-100 uppercase tracking-wider" id="agenda-view-title">Agenda Operativa</h2>
+                            <p class="text-xs text-zinc-500 mt-0.5">Gestión y pre-reservaciones en tiempo real para estilistas.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="text" id="lock-client-name" placeholder="Cliente" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-500 w-24">
+                            <select id="lock-stylist" onchange="handleLockStylistChange()" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none">
+                                <!-- Estilistas dinámicos -->
+                            </select>
+                            <select id="lock-service" onchange="handleLockServiceChange()" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none">
+                                <!-- Service list populated via API -->
+                            </select>
+                            <select id="lock-start-hour" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none font-mono">
+                                <option value="09:00">09:00</option>
+                                <option value="10:00">10:00</option>
+                                <option value="11:00">11:00</option>
+                                <option value="12:00" selected>12:00</option>
+                                <option value="13:00">13:00</option>
+                                <option value="14:00">14:00</option>
+                                <option value="15:00">15:00</option>
+                                <option value="16:00">16:00</option>
+                                <option value="17:00">17:00</option>
+                            </select>
+                            <select id="lock-duration" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none font-mono">
+                                <option value="1">1 hr</option>
+                                <option value="2">2 hrs</option>
+                                <option value="3">3 hrs</option>
+                                <option value="4">4 hrs</option>
+                                <option value="5" selected>5 hrs</option>
+                                <option value="6">6 hrs</option>
+                            </select>
+                            <input type="number" id="lock-cost" placeholder="Costo" value="3200" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-emerald-400 focus:outline-none focus:border-emerald-500 w-16 font-mono text-right">
+                            <button onclick="triggerAutoAppointmentLock()" class="bg-gradient-to-r from-amber-600 to-amber-700 text-zinc-950 font-bold px-3 py-1 text-xs uppercase rounded hover:from-amber-500 transition-all flex items-center gap-1 shadow-md shadow-amber-900/10">
+                                <i data-lucide="lock" class="h-3.5 w-3.5 text-zinc-950"></i> <span>Inyectar Bloque</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <div class="min-w-[650px]">
+                            <div class="grid gap-2 border-b border-zinc-800 pb-2 mb-2 text-center font-mono" id="agenda-header-row">
+                                <!-- Dynamic columns generated via JS -->
+                            </div>
+                            <div class="space-y-1.5" id="agenda-slots-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Lower Section: POS Terminal and Editor -->
+            <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Caja Blindada POS -->
+                <div class="lg:col-span-6 bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md flex flex-col justify-between">
+                    <div>
+                        <div class="border-b border-zinc-800 pb-2 mb-3 flex justify-between items-center">
+                            <span class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                                <i data-lucide="shield" class="h-4 w-4 text-emerald-400"></i> Terminal Caja Blindada POS
+                            </span>
+                            <div id="checkout-badge-status" class="text-[8px] font-mono bg-zinc-950 text-zinc-500 border border-zinc-850 px-2 py-0.5 rounded">STANDBY</div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Cita en cola de cobro o directa:</label>
+                                    <select id="checkout-appointment-select" onchange="handleCheckoutAppSelection()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"></select>
+                                </div>
+                                <div>
+                                    <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Servicio Aplicado:</label>
+                                    <select id="checkout-service-select" onchange="handlePOSServiceChange()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none font-sans"></select>
+                                </div>
+                                <div id="checkout-stylist-direct-container">
+                                    <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Estilista Responsable:</label>
+                                    <select id="checkout-stylist-select" onchange="handlePOSStylistChange()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none font-sans"></select>
+                                </div>
+                            </div>
+
+                            <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-850 flex flex-col justify-between space-y-2">
+                                <div>
+                                    <span class="text-[9px] font-mono text-zinc-500 uppercase block mb-1">Monto de Liquidación Protegido</span>
+                                    <div class="relative">
+                                        <span class="absolute left-2.5 top-1.5 text-zinc-650 text-xs font-mono">$</span>
+                                        <input type="text" id="checkout-amount-display" disabled class="w-full bg-zinc-900 border border-zinc-800 rounded py-1 pl-5 pr-10 text-xs text-zinc-350 cursor-not-allowed font-mono font-bold">
+                                        <span class="absolute right-2.5 top-1.5 text-[9px] text-zinc-605 font-mono">MXN</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Insumo/Retail Extra Consumido:</label>
+                                    <select id="checkout-product-addon" onchange="handleCheckoutProductAddon()" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-zinc-300 focus:outline-none font-mono">
+                                        <option value="none">-- Ninguno --</option>
+                                        <option value="shampoo">Jade Shampoo (+ $450.00)</option>
+                                        <option value="mask">Mascarilla Elixir (+ $680.00)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="text-[9px] uppercase font-mono text-zinc-400 block mb-1 flex items-center gap-1 font-bold text-amber-400">
+                                        <i data-lucide="credit-card" class="h-3 w-3 text-amber-400"></i> Método de Pago:
+                                    </label>
+                                    <select id="checkout-payment-method" onchange="handlePaymentMethodChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none font-sans font-bold">
+                                        <option value="">-- Seleccionar Método --</option>
+                                        <option value="Efectivo">💵 Efectivo</option>
+                                        <option value="Tarjeta">💳 Tarjeta</option>
+                                        <option value="Transferencia">🏦 Transferencia</option>
+                                    </select>
+                                </div>
+                                <p id="checkout-status-text" class="text-[10px] text-zinc-550 font-medium mt-1">Ninguna transacción en cola.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="commitSecureCheckoutPayment()" id="btn-submit-payment" disabled class="w-full mt-4 bg-zinc-800 text-zinc-500 cursor-not-allowed font-black py-2.5 rounded-lg text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2">
+                        <i data-lucide="credit-card" class="h-3.5 w-3.5"></i><span>Validar e Inyectar en Libro Contable</span>
+                    </button>
+                </div>
+
+                <!-- Editor Matrix Core -->
+                <div class="lg:col-span-6 bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md flex flex-col justify-between">
+                    <div class="border-b border-zinc-800 pb-2 mb-2 flex items-center space-x-2">
+                        <i data-lucide="edit-3" class="h-4 w-4 text-emerald-400"></i>
+                        <h2 class="text-xs font-bold text-zinc-200 uppercase tracking-wider" id="form-panel-title">Editor Matrix Core</h2>
+                    </div>
+                    
+                    <div id="appointment-editor-form" class="space-y-3 opacity-40 pointer-events-none flex-1 flex flex-col justify-between">
+                        <input type="hidden" id="edit-slot-hour"><input type="hidden" id="edit-slot-stylist">
+                        <input type="hidden" id="edit-appointment-id">
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div class="sm:col-span-1">
+                                <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Cliente</label>
+                                <input type="text" id="edit-customer-name" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="sm:col-span-1">
+                                <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Servicio asignado</label>
+                                <select id="edit-service-select" onchange="updateEditorCostPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"></select>
+                            </div>
+                            <div>
+                                <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Estado de Cobro</label>
+                                <select id="edit-payment-status" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono font-bold">
+                                    <option value="Pendiente">❌ Pendiente</option>
+                                    <option value="Cobrado">✅ Cobrado</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Duración Bloque (Horas)</label>
+                                <input type="number" id="edit-duration-hours" min="1" max="6" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white font-mono focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Precio ($ MXN)</label>
+                                <input type="number" id="edit-cost-display" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-emerald-400 font-mono focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] uppercase font-mono text-zinc-400 block mb-0.5 flex items-center gap-1">
+                                <i data-lucide="flask-conical" class="h-3 w-3"></i> Notas Técnicas / Formula:
+                            </label>
+                            <textarea id="edit-client-formula" rows="1" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-[11px] text-zinc-300 focus:outline-none font-mono" placeholder="Ingresa datos capilares..."></textarea>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="saveAppointmentModification()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-bold py-1.5 rounded text-xs uppercase tracking-wider">Confirmar Bloque</button>
+                            <button onclick="deleteAppointmentBlock()" class="bg-rose-950/30 border border-rose-900/50 text-rose-400 hover:bg-rose-900/40 px-3 rounded transition-all"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Audit Ledger and Payroll summaries -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Audit Ledger -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+                    <div class="border-b border-zinc-800 pb-2 mb-2 flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Libro Sincronizado (Ledger)</span>
+                        <span class="text-[8px] bg-zinc-950 border border-zinc-800 text-zinc-500 font-mono px-2 py-0.5 rounded">SYSTEM AUDIT</span>
+                    </div>
+                    <div class="font-mono text-[11px] text-zinc-400 bg-zinc-950 border border-zinc-850 rounded-lg p-2.5 h-[110px] overflow-y-auto space-y-1" id="audit-log-terminal"></div>
+                </div>
+
+                <!-- Payroll Summaries -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+                    <div class="border-b border-zinc-800 pb-1.5 mb-2 flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Nómina & Comisiones (30%)</span>
+                        <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono font-bold">
+                            NÓMINA TOTAL: <span id="payroll-total-commission">$0</span> MXN
+                        </span>
+                    </div>
+                    <div class="space-y-1 text-xs" id="stylist-payroll-summary-box"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- TAB 2: WHATSAPP CHAT CONSOLE -->
+        <div id="tab-content-whatsapp" class="hidden flex gap-6 h-[600px] overflow-hidden">
+            <!-- Chats List Sidebar (Left) -->
+            <div class="w-80 bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col overflow-hidden shadow-xl">
+                <div class="p-4 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-zinc-300">Chats de WhatsApp</h2>
+                    <span id="whatsapp-chats-count" class="text-[10px] bg-zinc-800 text-zinc-400 font-bold px-2 py-0.5 rounded-full">0</span>
+                </div>
+                <div class="flex-1 overflow-y-auto divide-y divide-zinc-800/40" id="whatsapp-chats-list">
+                    <!-- Chats list dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Chat Conversation Panel (Center) -->
+            <div class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col justify-between shadow-2xl">
+                <div id="chat-window-empty" class="flex-1 flex flex-col items-center justify-center text-zinc-450 p-8">
+                    <i data-lucide="message-square" class="w-12 h-12 mb-3 text-emerald-500/40 animate-pulse"></i>
+                    <p class="text-sm font-medium text-zinc-300">Selecciona un cliente</p>
+                    <p class="text-xs text-zinc-500 text-center max-w-xs mt-1">Elige un chat de la izquierda para ver el historial y tomar control manual de Elena IA.</p>
+                </div>
+                
+                <div id="chat-window-active" class="hidden flex-1 flex flex-col justify-between h-full">
+                    <!-- Chat Header -->
+                    <div class="flex items-center justify-between p-4 border-b border-zinc-800/60 bg-zinc-950/60 shrink-0">
+                        <div class="flex items-center space-x-3">
+                            <div id="active-chat-avatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-bold text-white shadow-lg">?</div>
+                            <div>
+                                <h3 id="active-chat-name" class="font-semibold text-zinc-100">Cliente</h3>
+                                <p class="text-xs text-zinc-400 flex items-center">
+                                    <span id="active-chat-phone">0</span>
+                                    <span class="mx-1.5">•</span>
+                                    <span id="active-chat-zone" class="text-emerald-450 font-medium">CDMX</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Bot Activation Toggle -->
+                        <div class="flex items-center space-x-3 bg-zinc-950/60 px-4 py-2 rounded-xl border border-zinc-850">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="bot" class="w-4 h-4 text-emerald-400" id="active-chat-bot-icon"></i>
+                                <span class="text-xs font-semibold text-zinc-300">Asistente IA (Elena)</span>
+                            </div>
+                            <button onclick="toggleActiveChatBot()" id="btn-toggle-bot" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-emerald-500">
+                                <span id="toggle-bot-switch-dot" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages Area -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-transparent to-zinc-950/20" id="chat-messages-box">
+                        <!-- Messages populated dynamically -->
+                    </div>
+
+                    <!-- Bot Active warning banner -->
+                    <div id="bot-active-banner" class="bg-emerald-950/20 border-t border-emerald-900/40 px-4 py-2 flex items-center space-x-2 text-xs text-emerald-400 font-medium shrink-0">
+                        <i data-lucide="bot" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span>El Asistente de IA está activo. Responderá automáticamente a este cliente.</span>
+                    </div>
+
+                    <!-- Support Response Input -->
+                    <form onsubmit="handleSendSupportMessage(event)" class="p-3 bg-zinc-900/80 border-t border-zinc-800/60 flex items-center space-x-2 shrink-0">
+                        <input type="text" id="input-support-message" placeholder="Escribe un mensaje de soporte..." class="flex-1 bg-zinc-950 border border-zinc-800 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-zinc-200 transition-all">
+                        <button type="submit" class="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-zinc-950 shadow-lg font-bold transition-all"><i data-lucide="send" class="w-4 h-4"></i></button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- WhatsApp Simulator (Right) -->
+            <div id="whatsapp-simulator-panel" class="w-80 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-1.5 border-b border-zinc-800 pb-3">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+                        <h3 class="text-sm font-bold text-zinc-200">Simulador Cliente WhatsApp</h3>
+                    </div>
+                    <p class="text-[11px] text-zinc-400 leading-relaxed bg-zinc-950/60 p-3 rounded-xl border border-zinc-850">
+                        Usa este panel para simular que un cliente envía un mensaje por WhatsApp al salón. Elena procesará sus herramientas y responderá.
+                    </p>
+
+                    <form onsubmit="handleSimulateClientMessage(event)" class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2" id="sim-new-client-fields">
+                            <input type="text" id="sim-client-name" placeholder="Nombre" class="bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none w-full">
+                            <input type="text" id="sim-client-phone" placeholder="Teléfono" class="bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none w-full">
+                        </div>
+                        <textarea id="sim-client-message" placeholder="Escribe como si fueras el cliente..." rows="4" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"></textarea>
+                        <button type="submit" id="btn-submit-simulation" class="w-full bg-zinc-800 border border-zinc-700 hover:bg-emerald-600 hover:border-emerald-500 hover:text-zinc-950 font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center space-x-1">
+                            <span>Enviar como Cliente</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="border-t border-zinc-850 pt-4 text-[10px] text-zinc-500 space-y-1">
+                    <p><strong>CPs/Zonas Cobertura:</strong> Satélite (53100), Mundo E (54054), Zona Esmeralda, Lomas Verdes, Naucalpan, Tlalnepantla, Polanco (11560), Condesa, Roma, Lomas, Del Valle, Santa Fe.</p>
+                    <p><strong>Servicios:</strong> Nanoplastia Premium ($3200), Balayage Premium ($2100), Corte Premium ($800), Tinte de Cobertura ($1200), Botox Capilar ($850), Depilación IPL ($3200).</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-900 bg-zinc-950 py-4 px-6 text-center mt-6">
+        <p class="text-[10px] font-mono text-zinc-650">AURA SECURE KERNEL // CRYPTO-VERIFIED TRANSACTIONAL LEDGER // PLATINUM CORE</p>
+    </footer>
+
+    <!-- Scripting Area -->
+    <script>
+        const state = {
+            activeTab: 'dashboard',
+            currentUser: 'Tony',
+            selectedDate: new Date().toLocaleString('sv-SE', { timeZone: 'America/Mexico_City' }).replace(',', '').split(/\s+/)[0],
+            cajaTotalizada: 0,
+            gastosTotales: 0,
+            
+            inventory: {},
+            services: [],
+            stylists: [],
+            database: {},
+            draggedNode: null,
+            payroll: [],
+            logs: [],
+            
+            // WhatsApp Console State
+            chats: [],
+            selectedChat: null,
+            messages: []
+        };
+
+        const hoursArray = ["11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+        let stylistsArray = [];
+        const retailProductMap = {
+            'shampoo': 'shampoo_retail',
+            'mask': 'mask_retail'
+        };
+
+        // TAB SWITCH CONTROLLER
+        function switchTab(tabId) {
+            state.activeTab = tabId;
+            const dashBtn = document.getElementById('tab-dashboard');
+            const waBtn = document.getElementById('tab-whatsapp');
+            const dashContent = document.getElementById('tab-content-dashboard');
+            const waContent = document.getElementById('tab-content-whatsapp');
+
+            if (tabId === 'dashboard') {
+                dashBtn.className = "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-zinc-950 shadow-md";
+                waBtn.className = "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-zinc-400 hover:text-white";
+                dashContent.classList.remove('hidden');
+                waContent.classList.add('hidden');
+            } else {
+                waBtn.className = "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-zinc-950 shadow-md";
+                dashBtn.className = "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-zinc-400 hover:text-white";
+                waContent.classList.remove('hidden');
+                dashContent.classList.add('hidden');
+                loadWhatsAppChats();
+            }
+            lucide.createIcons();
+        }
+
+        // API AJAX HELPERS
+        const API_URL = '';
+
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const res = await fetch(`${API_URL}${endpoint}`, options);
+                if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.error(`API Error on ${endpoint}:`, err);
+                triggerToast(`Error de conexión al servidor en ${endpoint}`, 'error');
+                return null;
+            }
+        }
+
+        async function loadState() {
+            // Load stylists first
+            const stylistsData = await fetchAPI('/api/estilistas');
+            if (stylistsData) {
+                state.stylists = stylistsData.filter(s => s.activo);
+                stylistsArray = state.stylists.map(s => s.nombre);
+            }
+
+            // Load inventory
+            const inv = await fetchAPI('/api/inventario');
+            if (inv) {
+                state.inventory = {};
+                inv.forEach(i => {
+                    state.inventory[i.key_name] = {
+                        name: i.nombre,
+                        stock: i.stock,
+                        min: i.min,
+                        costPerUnit: Number(i.cost_per_unit),
+                        price: i.price ? Number(i.price) : null,
+                        itemType: i.item_type
+                    };
+                });
+            }
+
+            // Load services
+            const srv = await fetchAPI('/api/servicios');
+            if (srv) {
+                state.services = srv.map(s => {
+                    let stockKey = null;
+                    let stockQty = 0;
+                    if (s.nombre.includes('Nanoplastia')) { stockKey = 'nanoplastia_elixir'; stockQty = 250; }
+                    if (s.nombre.includes('Balayage') || s.nombre.includes('Tinte')) { stockKey = 'jade_tinte'; stockQty = 120; }
+                    
+                    return {
+                        id: s.id,
+                        name: s.nombre,
+                        price: Number(s.precio_fijo),
+                        defaultDuration: Math.round(s.duracion_minutos / 60),
+                        stockKey,
+                        stockQty
+                    };
+                });
+            }
+
+            // Load Nomina
+            const nom = await fetchAPI('/api/nomina');
+            if (nom) {
+                state.payroll = nom.map(n => ({
+                    stylist: n.stylist,
+                    service: n.service,
+                    amount: Number(n.amount),
+                    commission: Number(n.commission),
+                    type: n.type,
+                    date: n.date
+                }));
+            }
+
+            // Load Logs
+            const lg = await fetchAPI('/api/logs');
+            if (lg) {
+                state.logs = lg.map(l => ({
+                    time: l.time,
+                    user: l.username,
+                    txt: l.txt
+                }));
+            }
+
+            // Load Citas & map to slots
+            const appointments = await fetchAPI('/api/citas');
+            if (appointments) {
+                // Initialize active date slots
+                state.database[state.selectedDate] = {};
+                stylistsArray.forEach(st => {
+                    state.database[state.selectedDate][st] = {};
+                    hoursArray.forEach(h => {
+                        state.database[state.selectedDate][st][h] = null;
+                    });
+                });
+
+                // Filter for selected date (YYYY-MM-DD)
+                appointments.forEach(app => {
+                    const start = new Date(app.fecha_hora_inicio);
+                    const end = new Date(app.fecha_hora_fin);
+
+                    try {
+                        const mxStr = start.toLocaleString('sv-SE', { timeZone: 'America/Mexico_City' });
+                        const [datePart, timePart] = mxStr.replace(',', '').split(/\s+/);
+                        
+                        if (datePart === state.selectedDate) {
+                            const stylist = app.estilista_nombre;
+                            if (state.database[state.selectedDate][stylist]) {
+                                const roundedHour = `${timePart.substring(0, 2)}:00`;
+                                const startIdx = hoursArray.indexOf(roundedHour);
+                                if (startIdx !== -1) {
+                                    const durationHrs = Math.max(1, Math.round((end - start) / (60 * 60 * 1000)));
+
+                                    state.database[state.selectedDate][stylist][roundedHour] = {
+                                        id: app.id,
+                                        customer: app.nombre_cliente || app.cliente_id,
+                                        service: app.servicio_nombre,
+                                        duration: durationHrs,
+                                        cost: Number(app.precio_fijo),
+                                        status: app.estado === 'confirmada' ? 'Cobrado' : 'Pendiente',
+                                        formula: app.link_comprobante || '',
+                                        type: app.estado === 'confirmada' ? 'timelock' : 'standard'
+                                    };
+
+                                    for (let i = 1; i < durationHrs; i++) {
+                                        if (startIdx + i < hoursArray.length) {
+                                            state.database[state.selectedDate][stylist][hoursArray[startIdx + i]] = {
+                                                type: 'parent',
+                                                parentHour: roundedHour
+                                            };
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error formatting appointment date:', e);
+                    }
+                });
+            }
+
+            // Recalculate Totals (No fake or hardcoded values)
+            let totalCaja = 0;
+            let totalComm = 0;
+            let totalProductCosts = 0;
+            
+            state.payroll.forEach(p => {
+                totalCaja += p.amount;
+                totalComm += p.commission;
+                
+                const serviceNameLower = p.service.toLowerCase();
+                if (serviceNameLower.includes('nanoplastia')) {
+                    totalProductCosts += 1000;
+                } else if (serviceNameLower.includes('tinte') || serviceNameLower.includes('balayage')) {
+                    totalProductCosts += 300;
+                }
+            });
+            
+            state.cajaTotalizada = totalCaja;
+            state.gastosTotales = totalComm + totalProductCosts;
+
+            render();
+            applyRoleRestrictions();
+        }
+
+        async function createSystemLog(username, txt) {
+            await fetchAPI('/api/logs/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, txt })
+            });
+            loadState();
+        }
+
+        async function pushAuditLog(text) {
+            await createSystemLog(state.currentUser, text);
+        }
+
+        function applyRoleRestrictions() {
+            const isAdmin = state.currentUser === 'Tony';
+            const blurElements = [
+                document.getElementById('stat-caja'),
+                document.getElementById('stat-gastos'),
+                document.getElementById('stat-neto'),
+                document.getElementById('payroll-total-commission'),
+                document.getElementById('stylist-payroll-summary-box')
+            ];
+            
+            blurElements.forEach(el => {
+                if (el) {
+                    if (isAdmin) {
+                        el.classList.remove('blur-sm', 'pointer-events-none', 'select-none');
+                    } else {
+                        el.classList.add('blur-sm', 'pointer-events-none', 'select-none');
+                    }
+                }
+            });
+
+            const stockEditBadge = document.getElementById('stock-edit-badge');
+            if (stockEditBadge) {
+                if (isAdmin) {
+                    stockEditBadge.innerText = "EDITABLE";
+                    stockEditBadge.className = "text-[8px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded animate-pulse";
+                } else {
+                    stockEditBadge.innerText = "SÓLO LECTURA";
+                    stockEditBadge.className = "text-[8px] font-mono bg-zinc-950 text-zinc-500 border border-zinc-850 px-1.5 py-0.5 rounded";
+                }
+            }
+        }
+
+        async function switchUser(role) {
+            state.currentUser = role;
+            ['Tony', 'Recepción'].forEach(r => {
+                const btn = document.getElementById(`role-${r}`);
+                if (btn) {
+                    if (r === role) btn.className = "px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 bg-emerald-500 text-zinc-950 font-bold shadow-glow-emerald";
+                    else btn.className = "px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 text-zinc-400 hover:text-white";
+                }
+            });
+            pushAuditLog(`Sesión de sistema conmutada al usuario: [${role}]`);
+            closeFormEditor();
+            applyRoleRestrictions();
+            render();
+        }
+
+        function triggerToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto bg-zinc-900 border border-zinc-800 rounded-lg p-3 shadow-xl flex items-center space-x-3 min-w-[240px] max-w-sm`;
+            let c = 'text-emerald-400';
+            let iconName = 'info';
+            if (type === 'warning') { c = 'text-amber-400'; iconName = 'shield-alert'; }
+            if (type === 'error') { c = 'text-rose-400'; iconName = 'alert-triangle'; }
+            if (type === 'success') { c = 'text-emerald-400'; iconName = 'check-circle'; }
+            toast.innerHTML = `<i data-lucide="${iconName}" class="h-4 w-4 ${c} shrink-0"></i><div class="flex-1"><p class="text-xs font-medium text-zinc-200">${message}</p></div>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => { toast.classList.add('translate-y-2', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function getActiveSchedule() {
+            if (!state.database[state.selectedDate]) {
+                state.database[state.selectedDate] = {};
+                stylistsArray.forEach(st => {
+                    state.database[state.selectedDate][st] = {};
+                    hoursArray.forEach(h => {
+                        state.database[state.selectedDate][st][h] = null;
+                    });
+                });
+            }
+            return state.database[state.selectedDate];
+        }
+
+        // DRAG & DROP LOGIC CONTROLLERS
+        function handleDragStart(ev, hour, stylist) {
+            state.draggedNode = { hour, stylist };
+            ev.dataTransfer.effectAllowed = "move";
+        }
+
+        async function handleDrop(ev, targetHour, targetStylist) {
+            ev.preventDefault();
+            if (!state.draggedNode) return;
+            
+            const sched = getActiveSchedule();
+            const sourceApp = sched[state.draggedNode.stylist][state.draggedNode.hour];
+            if (!sourceApp || sourceApp.type === 'parent') return;
+
+            // Verify specialties mapping
+            const stylistObj = state.stylists.find(s => s.nombre === targetStylist);
+            if (sourceApp.service !== "Bloque Personalizado" && stylistObj) {
+                const isAuthorized = stylistObj.especialidades.some(spec => 
+                    spec.toLowerCase().trim() === sourceApp.service.toLowerCase().trim()
+                );
+                if (!isAuthorized) {
+                    triggerToast(`${targetStylist} no está autorizada para realizar el servicio: ${sourceApp.service}.`, "error");
+                    state.draggedNode = null;
+                    return;
+                }
+            }
+
+            // Delete original
+            await fetchAPI(`/api/citas/${sourceApp.id}`, { method: 'DELETE' });
+
+            // Try to fit at target
+            const startIdx = hoursArray.indexOf(targetHour);
+            let fits = true;
+            for (let i = 0; i < sourceApp.duration; i++) {
+                if (startIdx + i >= hoursArray.length) { fits = false; break; }
+                const testHr = hoursArray[startIdx + i];
+                if (sched[targetStylist][testHr]) { fits = false; break; }
+            }
+
+            if (!fits) {
+                triggerToast("Bloque de destino ocupado o bloqueado.", "error");
+                // Re-create original
+                await fetchAPI('/api/citas/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer: sourceApp.customer,
+                        service: sourceApp.service,
+                        duration: sourceApp.duration,
+                        cost: sourceApp.cost,
+                        status: sourceApp.status === 'Cobrado' ? 'Cobrado' : 'Pendiente',
+                        formula: sourceApp.formula,
+                        stylist: state.draggedNode.stylist,
+                        date: state.selectedDate,
+                        hour: state.draggedNode.hour
+                    })
+                });
+                loadState();
+                return;
+            }
+
+            // Create target
+            await fetchAPI('/api/citas/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: sourceApp.customer,
+                    service: sourceApp.service,
+                    duration: sourceApp.duration,
+                    cost: sourceApp.cost,
+                    status: sourceApp.status === 'Cobrado' ? 'Cobrado' : 'Pendiente',
+                    formula: sourceApp.formula,
+                    stylist: targetStylist,
+                    date: state.selectedDate,
+                    hour: targetHour
+                })
+            });
+
+            await pushAuditLog(`Agenda D&D: Desplazó cita de [${sourceApp.customer}] de ${state.draggedNode.stylist}(${state.draggedNode.hour}) a ${targetStylist}(${targetHour}).`);
+            state.draggedNode = null;
+            loadState();
+        }
+
+        // ALMACÉN WIDGET
+        function renderInventoryModule() {
+            const container = document.getElementById('inventory-list-box');
+            container.innerHTML = '';
+            
+            const isRestricted = state.currentUser === 'Recepción';
+            const badge = document.getElementById('stock-edit-badge');
+            
+            if (isRestricted) {
+                badge.innerText = "SÓLO LECTURA";
+                badge.className = "text-[8px] font-mono bg-zinc-950 text-zinc-500 border border-zinc-850 px-1.5 py-0.5 rounded";
+            } else {
+                badge.innerText = "EDITABLE";
+                badge.className = "text-[8px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded animate-pulse";
+            }
+
+            Object.keys(state.inventory).forEach(key => {
+                const item = state.inventory[key];
+                const isLow = item.stock < item.min;
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-2 bg-zinc-950/40 border border-zinc-850 rounded-lg";
+                div.innerHTML = `
+                    <div class="truncate pr-1">
+                        <span class="text-xs font-medium block text-zinc-300 truncate">${item.name}</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5 shrink-0">
+                        <input type="number" value="${item.stock}" 
+                            ${isRestricted ? 'disabled' : ''} 
+                            onchange="modifyWarehouseStockItem('${key}', this.value)"
+                            class="w-12 bg-zinc-900 border border-zinc-800 text-center font-mono text-xs rounded py-0.5 ${isLow ? 'text-rose-400 border-rose-900/60 font-bold' : 'text-emerald-400'} ${isRestricted ? 'cursor-not-allowed opacity-60' : ''}">
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            // Alertas globales de almacén
+            let lowCount = Object.values(state.inventory).filter(i => i.stock < i.min).length;
+            const itemAlert = document.getElementById('stat-inventory-alerts');
+            itemAlert.innerHTML = `<i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i> ${lowCount} Alertas de Stock`;
+            itemAlert.className = `text-xs font-mono font-bold flex items-center gap-1 ${lowCount > 0 ? 'text-rose-400 animate-pulse' : 'text-zinc-500'}`;
+        }
+
+        async function modifyWarehouseStockItem(key, val) {
+            const item = state.inventory[key];
+            if (item) {
+                const old = item.stock;
+                const updatedVal = parseInt(val) || 0;
+                
+                await fetchAPI('/api/inventario/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key_name: key, stock: updatedVal })
+                });
+
+                await pushAuditLog(`Almacén: Modificó stock de [${item.name}] de ${old} a ${updatedVal}.`);
+                loadState();
+            }
+        }
+
+        function renderServicesRates() {
+            const container = document.getElementById('services-rates-box');
+            container.innerHTML = '';
+            state.services.forEach(s => {
+                const isRestricted = state.currentUser === 'Recepción';
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-1.5 bg-zinc-950/20 text-xs border border-zinc-900 rounded-md";
+                div.innerHTML = `
+                    <span class="text-zinc-400">${s.name}</span>
+                    <div class="font-mono flex items-center space-x-1">
+                        <span class="text-zinc-650">$</span>
+                        <input type="number" value="${s.price}" 
+                            ${isRestricted ? 'disabled' : ''} 
+                            onchange="modifyServiceRateCost('${s.id}', this.value)" 
+                            class="w-16 bg-zinc-900 border border-zinc-800 rounded px-1 py-0.5 text-right text-emerald-400 ${isRestricted ? 'cursor-not-allowed opacity-70' : ''}">
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function modifyServiceRateCost(id, val) {
+            const s = state.services.find(x => x.id == id);
+            if (s) {
+                const old = s.price;
+                const updatedPrice = parseInt(val) || 0;
+
+                await fetchAPI('/api/servicios/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, price: updatedPrice })
+                });
+
+                await pushAuditLog(`Tarifas: Ajustó costo base de [${s.name}] de $${old} a $${updatedPrice} MXN.`);
+                loadState();
+            }
+        }
+
+        function renderMonthlyCalendar() {
+            const container = document.getElementById('monthly-calendar-grid');
+            container.innerHTML = '';
+            
+            const [currYear, currMonth, currDay] = state.selectedDate.split('-').map(Number);
+            
+            const months = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+            const monthsAbbr = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+            
+            // Update month year label
+            const labelEl = document.getElementById('calendar-month-year');
+            if (labelEl) {
+                labelEl.innerText = `${months[currMonth - 1]} ${currYear}`;
+            }
+            
+            // Calculate first day of the month
+            const firstDay = new Date(currYear, currMonth - 1, 1);
+            const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Calculate number of days in the month
+            const totalDays = new Date(currYear, currMonth, 0).getDate();
+            
+            // Add empty cells for offset
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'p-1';
+                container.appendChild(empty);
+            }
+            
+            // Add day buttons
+            for (let d = 1; d <= totalDays; d++) {
+                const dateStr = `${currYear}-${String(currMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isSelected = state.selectedDate === dateStr;
+                const btn = document.createElement('button');
+                btn.className = `p-1 rounded text-xs font-mono font-bold flex flex-col items-center justify-center border transition-all ${isSelected ? 'bg-emerald-500 text-zinc-950 border-emerald-400 shadow-glow-emerald' : 'bg-zinc-950/40 border-zinc-850 text-zinc-500 hover:border-zinc-700'}`;
+                btn.innerHTML = `<span>${d}</span>`;
+                btn.onclick = () => { 
+                    state.selectedDate = dateStr; 
+                    closeFormEditor(); 
+                    loadState(); 
+                };
+                container.appendChild(btn);
+            }
+            
+            // Sync calendar day badge
+            document.getElementById('calendar-day-badge').innerText = `${String(currDay).padStart(2, '0')} ${monthsAbbr[currMonth - 1]}`;
+        }
+
+        function navigateMonth(direction) {
+            const [currYear, currMonth, currDay] = state.selectedDate.split('-').map(Number);
+            
+            let newMonth = currMonth + direction;
+            let newYear = currYear;
+            if (newMonth > 12) {
+                newMonth = 1;
+                newYear++;
+            } else if (newMonth < 1) {
+                newMonth = 12;
+                newYear--;
+            }
+            
+            const totalDaysInNewMonth = new Date(newYear, newMonth, 0).getDate();
+            const newDay = Math.min(currDay, totalDaysInNewMonth);
+            
+            state.selectedDate = `${newYear}-${String(newMonth).padStart(2, '0')}-${String(newDay).padStart(2, '0')}`;
+            closeFormEditor();
+            loadState();
+        }
+
+        // SLOTS GRID DRAWING
+        function renderAgendaGrid() {
+            const container = document.getElementById('agenda-slots-grid');
+            container.innerHTML = '';
+            const sched = getActiveSchedule();
+
+            // Populate header row dynamically
+            const headerRow = document.getElementById('agenda-header-row');
+            if (headerRow) {
+                headerRow.innerHTML = '';
+                const colCount = state.stylists.length + 1;
+                headerRow.style.display = 'grid';
+                headerRow.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+                
+                const hourHeader = document.createElement('div');
+                hourHeader.className = 'text-center font-bold text-xs text-zinc-500 uppercase tracking-wider py-1.5';
+                hourHeader.innerText = 'Hora';
+                headerRow.appendChild(hourHeader);
+                
+                state.stylists.forEach(stObj => {
+                    const stHeader = document.createElement('div');
+                    stHeader.className = 'text-center font-bold text-[10px] sm:text-xs uppercase tracking-wider py-1.5 rounded border border-zinc-800';
+                    stHeader.style.color = stObj.color;
+                    stHeader.style.borderColor = `${stObj.color}25`;
+                    stHeader.style.backgroundColor = `${stObj.color}08`;
+                    stHeader.innerText = stObj.nombre;
+                    headerRow.appendChild(stHeader);
+                });
+            }
+
+            hoursArray.forEach(hour => {
+                const row = document.createElement('div');
+                row.className = 'grid gap-2 text-center items-center min-h-[44px]';
+                const colCount = state.stylists.length + 1;
+                row.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+                
+                const hrTag = document.createElement('div');
+                hrTag.className = 'text-center font-mono text-xs text-zinc-400 bg-zinc-950/50 py-3 rounded border border-zinc-850';
+                hrTag.innerText = hour;
+                row.appendChild(hrTag);
+                
+                state.stylists.forEach(stObj => {
+                    const st = stObj.nombre;
+                    const app = sched[st] ? sched[st][hour] : null;
+                    const cell = document.createElement('div');
+                    
+                    cell.ondragover = (e) => e.preventDefault();
+                    cell.ondrop = (e) => handleDrop(e, hour, st);
+
+                    if (app === undefined || app === null) {
+                        cell.className = "text-center border border-dashed border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/10 text-zinc-600 hover:text-emerald-400 py-2.5 px-3 rounded-lg text-xs transition-all cursor-pointer font-medium select-none";
+                        cell.innerText = "Disponible";
+                        cell.onclick = () => openSlotEditor(hour, st);
+                    } else if (app.type === 'parent') {
+                        cell.className = "bg-zinc-950/20 border border-zinc-900/60 text-zinc-600 py-2.5 px-3 rounded-lg text-[10px] font-mono text-center italic select-none cursor-pointer";
+                        cell.innerText = "↳ Duración Ocupada";
+                        cell.onclick = () => openSlotEditor(hour, st);
+                    } else {
+                        cell.draggable = true;
+                        cell.ondragstart = (e) => handleDragStart(e, hour, st);
+
+                        const isPaid = app.status === 'Cobrado';
+                        const isLock = app.type === 'timelock';
+
+                        cell.className = `p-2 rounded-lg text-xs transition-all cursor-pointer relative ${
+                            isLock 
+                            ? 'bg-zinc-900 bg-stripes-green border border-emerald-500/50 text-white font-bold' 
+                            : 'bg-zinc-800/90 border border-zinc-700/60 text-zinc-200'
+                        } ${!isPaid ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-emerald-400'}`;
+
+                        cell.style.borderColor = isLock ? `${stObj.color}80` : '';
+                        if (isLock) {
+                            cell.style.boxShadow = `0 0 15px -3px ${stObj.color}40`;
+                        }
+
+                        cell.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold truncate max-w-[90px] ${isLock ? 'text-emerald-100' : ''}" style="color: ${isLock ? stObj.color : ''}">${app.customer}</span>
+                                <span class="text-[8px] font-mono font-bold px-1 rounded ${isPaid ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}">
+                                    ${isPaid ? 'PAGADO' : 'PENDIENTE'}
+                                </span>
+                            </div>
+                            <p class="text-[10px] ${isLock ? 'text-zinc-300 font-medium' : 'text-zinc-400'} mt-0.5 font-mono truncate">${app.service} (${app.duration}h)</p>
+                        `;
+                        cell.onclick = () => openSlotEditor(hour, st);
+                    }
+                    row.appendChild(cell);
+                });
+                container.appendChild(row);
+            });
+        }
+
+        // EDITOR MATRIX COMPONENT
+        function openSlotEditor(hour, stylist) {
+
+            const sched = getActiveSchedule();
+            let app = sched[stylist][hour];
+            if (app && app.type === 'parent') {
+                let curr = hoursArray.indexOf(hour);
+                while (curr >= 0) {
+                    if (sched[stylist][hoursArray[curr]] && sched[stylist][hoursArray[curr]].type !== 'parent') {
+                        hour = hoursArray[curr];
+                        app = sched[stylist][hour];
+                        break;
+                    }
+                    curr--;
+                }
+            }
+
+            document.getElementById('form-panel-title').innerText = `Gestión: ${stylist} [${hour}]`;
+            document.getElementById('edit-slot-hour').value = hour;
+            document.getElementById('edit-slot-stylist').value = stylist;
+            document.getElementById('appointment-editor-form').className = "space-y-3 flex-1 flex flex-col justify-between opacity-100 pointer-events-auto";
+
+            const select = document.getElementById('edit-service-select');
+            const stylistObj = state.stylists.find(s => s.nombre === stylist);
+            
+            // Filter services by stylist specialties
+            let filteredServices = state.services;
+            if (stylistObj) {
+                filteredServices = state.services.filter(s => 
+                    stylistObj.especialidades.some(spec => spec.toLowerCase().trim() === s.name.toLowerCase().trim())
+                );
+            }
+            
+            select.innerHTML = filteredServices.map(s => `<option value="${s.id}">${s.name}</option>`).join('') + `<option value="custom">-- Bloque Personalizado --</option>`;
+
+            const isTony = state.currentUser === 'Tony';
+            const costInput = document.getElementById('edit-cost-display');
+            if (isTony) {
+                costInput.disabled = false;
+                costInput.classList.remove('cursor-not-allowed', 'text-zinc-500');
+                costInput.classList.add('text-emerald-400');
+            } else {
+                costInput.disabled = true;
+                costInput.classList.add('cursor-not-allowed', 'text-zinc-500');
+                costInput.classList.remove('text-emerald-400');
+            }
+
+            if (app) {
+                document.getElementById('edit-appointment-id').value = app.id;
+                document.getElementById('edit-customer-name').value = app.customer;
+                const matched = state.services.find(s => s.name === app.service);
+                select.value = matched ? matched.id : "custom";
+                document.getElementById('edit-duration-hours').value = app.duration;
+                document.getElementById('edit-cost-display').value = app.cost;
+                document.getElementById('edit-payment-status').value = app.status;
+                document.getElementById('edit-client-formula').value = app.formula || '';
+            } else {
+                document.getElementById('edit-appointment-id').value = '';
+                document.getElementById('edit-customer-name').value = '';
+                select.value = filteredServices.length > 0 ? filteredServices[0].id : "custom";
+                document.getElementById('edit-duration-hours').value = 1;
+                document.getElementById('edit-cost-display').value = 400;
+                document.getElementById('edit-payment-status').value = "Pendiente";
+                document.getElementById('edit-client-formula').value = '';
+                updateEditorCostPreview();
+            }
+
+            // Smooth scroll to the editor form
+            const formPanel = document.getElementById('appointment-editor-form');
+            if (formPanel) {
+                formPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateEditorCostPreview() {
+            const srvId = document.getElementById('edit-service-select').value;
+            const srv = state.services.find(s => s.id == srvId);
+            if (srv) {
+                document.getElementById('edit-cost-display').value = srv.price;
+                document.getElementById('edit-duration-hours').value = srv.defaultDuration;
+            }
+        }
+
+        async function saveAppointmentModification() {
+            const id = document.getElementById('edit-appointment-id').value;
+            const hour = document.getElementById('edit-slot-hour').value;
+            const stylist = document.getElementById('edit-slot-stylist').value;
+            const customer = document.getElementById('edit-customer-name').value.trim();
+            const serviceId = document.getElementById('edit-service-select').value;
+            const duration = parseInt(document.getElementById('edit-duration-hours').value) || 1;
+            const cost = parseInt(document.getElementById('edit-cost-display').value) || 0;
+            const status = document.getElementById('edit-payment-status').value;
+            const formula = document.getElementById('edit-client-formula').value;
+
+            if (!customer) {
+                triggerToast("Nombre del cliente requerido.", "warning");
+                return;
+            }
+
+            const srv = state.services.find(s => s.id == serviceId);
+            const serviceName = srv ? srv.name : "Bloque Personalizado";
+
+            // Verify specialties mapping
+            const stylistObj = state.stylists.find(s => s.nombre === stylist);
+            if (serviceName !== "Bloque Personalizado" && stylistObj) {
+                const isAuthorized = stylistObj.especialidades.some(spec => 
+                    spec.toLowerCase().trim() === serviceName.toLowerCase().trim()
+                );
+                if (!isAuthorized) {
+                    triggerToast(`${stylist} no está autorizada para realizar el servicio: ${serviceName}.`, "error");
+                    return;
+                }
+            }
+
+            // If updating, delete the old first
+            if (id) {
+                await fetchAPI(`/api/citas/${id}`, { method: 'DELETE' });
+            }
+
+            // Verify slots fit
+            const sched = getActiveSchedule();
+            const startIdx = hoursArray.indexOf(hour);
+            let fits = true;
+            for (let i = 0; i < duration; i++) {
+                if (startIdx + i >= hoursArray.length) { fits = false; break; }
+                const blockHr = hoursArray[startIdx + i];
+                const block = sched[stylist][blockHr];
+                if (block && block.id !== id && block.type !== 'parent') { fits = false; break; }
+            }
+
+            if (!fits) {
+                triggerToast("El bloque de agenda entra en conflicto con otra cita.", "error");
+                return;
+            }
+
+            // Create new
+            await fetchAPI('/api/citas/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer,
+                    service: serviceName,
+                    duration,
+                    cost,
+                    status,
+                    formula,
+                    stylist,
+                    date: state.selectedDate,
+                    hour
+                })
+            });
+
+            await pushAuditLog(`Agenda: Guardó bloque de [${customer}] con ${stylist} a las ${hour} ($${cost} MXN).`);
+            triggerToast("Agenda actualizada.", "success");
+            closeFormEditor();
+            loadState();
+        }
+
+        async function deleteAppointmentBlock() {
+            const id = document.getElementById('edit-appointment-id').value;
+            const customer = document.getElementById('edit-customer-name').value;
+            if (id) {
+                await fetchAPI(`/api/citas/${id}`, { method: 'DELETE' });
+                await pushAuditLog(`Agenda: Canceló bloque de [${customer}] en ID ${id}.`);
+                triggerToast("Cita cancelada.", "success");
+            }
+            closeFormEditor();
+            loadState();
+        }
+
+        function closeFormEditor() {
+            document.getElementById('appointment-editor-form').className = "space-y-3 opacity-40 pointer-events-none flex-1 flex flex-col justify-between";
+            document.getElementById('form-panel-title').innerText = "Editor Matrix Core";
+        }
+
+        // TIME LOCKS / INJECT CUSTOM BLOCKS
+        function updateLockCostPreview() {
+            const id = document.getElementById('lock-service').value;
+            const srv = state.services.find(s => s.id == id);
+            if (srv) {
+                document.getElementById('lock-cost').value = srv.price;
+                document.getElementById('lock-duration').value = srv.defaultDuration;
+            }
+        }
+
+        async function triggerAutoAppointmentLock() {
+            const nameInput = document.getElementById('lock-client-name').value.trim() || "CANDADO DE TIEMPO";
+            const duration = parseInt(document.getElementById('lock-duration').value) || 1;
+            const stylist = document.getElementById('lock-stylist').value;
+            const startHour = document.getElementById('lock-start-hour').value;
+            const cost = parseInt(document.getElementById('lock-cost').value) || 0;
+            const srvId = document.getElementById('lock-service').value;
+            const srv = state.services.find(s => s.id == srvId);
+            const serviceName = srv ? srv.name : "Bloque Personalizado";
+
+            // Verify specialties mapping
+            const stylistObj = state.stylists.find(s => s.nombre === stylist);
+            if (serviceName !== "Bloque Personalizado" && stylistObj) {
+                const isAuthorized = stylistObj.especialidades.some(spec => 
+                    spec.toLowerCase().trim() === serviceName.toLowerCase().trim()
+                );
+                if (!isAuthorized) {
+                    triggerToast(`${stylist} no está autorizada para realizar el servicio: ${serviceName}.`, "error");
+                    return;
+                }
+            }
+
+            const sched = getActiveSchedule();
+            const startIdx = hoursArray.indexOf(startHour);
+            
+            if (startIdx === -1 || startIdx + duration > hoursArray.length) {
+                triggerToast("La duración excede el horario operativo diario de este estilista.", "error");
+                return;
+            }
+
+            // Check if slots are free
+            let free = true;
+            for (let i = 0; i < duration; i++) {
+                const hr = hoursArray[startIdx + i];
+                if (sched[stylist][hr]) { free = false; break; }
+            }
+
+            if (!free) {
+                triggerToast(`${stylist} se encuentra ocupado/a en alguno de los bloques seleccionados.`, "error");
+                return;
+            }
+
+            await fetchAPI('/api/citas/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: nameInput,
+                    service: serviceName,
+                    duration,
+                    cost,
+                    status: 'Pendiente',
+                    formula: 'Candado de administración',
+                    stylist,
+                    date: state.selectedDate,
+                    hour: startHour
+                })
+            });
+
+            await pushAuditLog(`Candado: Bloqueó structuralmente ${duration} horas en ${stylist} para [${nameInput}] desde las ${startHour} por $${cost} MXN (${serviceName}).`);
+            triggerToast(`Candado de tiempo inyectado.`, "success");
+            loadState();
+        }
+
+        // COBRO POS WIDGETS
+        function populateCheckoutFormWidgets() {
+            const selectApp = document.getElementById('checkout-appointment-select');
+            const prevAppVal = selectApp.value;
+            
+            const selectSrv = document.getElementById('checkout-service-select');
+            const selectChStylist = document.getElementById('checkout-stylist-select');
+            const prevSrvVal = selectSrv.value;
+            const prevStylistVal = selectChStylist ? selectChStylist.value : '';
+            
+            selectApp.innerHTML = `<option value="direct">-- Crear Venta Directa de Caja --</option>`;
+            
+            const sched = getActiveSchedule();
+            stylistsArray.forEach(st => {
+                hoursArray.forEach(hr => {
+                    const app = sched[st][hr];
+                    if (app && app.type !== 'parent') {
+                        selectApp.innerHTML += `<option value="${st}|${hr}">${app.customer} - ${app.service} (${st}) [${app.status}]</option>`;
+                    }
+                });
+            });
+
+            let selectionRestored = false;
+            if (prevAppVal && Array.from(selectApp.options).some(opt => opt.value === prevAppVal)) {
+                selectApp.value = prevAppVal;
+                selectionRestored = true;
+            } else {
+                selectApp.value = 'direct';
+            }
+
+            const target = selectApp.value;
+            const badge = document.getElementById('checkout-badge-status');
+            
+            if (target === 'direct') {
+                selectSrv.disabled = false;
+                if (selectChStylist) selectChStylist.disabled = false;
+                badge.innerText = "VENTA DIRECTA";
+                badge.className = "text-[8px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded";
+
+                // Always populate services to ensure list is up to date
+                selectSrv.innerHTML = state.services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                
+                // Restore previous selection if valid
+                if (prevSrvVal && state.services.some(s => s.id == prevSrvVal)) {
+                    selectSrv.value = prevSrvVal;
+                } else if (state.services.length > 0) {
+                    selectSrv.value = state.services[0].id;
+                }
+
+                // Filter stylists based on selected service
+                const selectedServiceId = selectSrv.value;
+                const srv = state.services.find(s => s.id == selectedServiceId);
+                let filteredStylists = state.stylists;
+                if (srv) {
+                    filteredStylists = state.stylists.filter(st => 
+                        st.especialidades.some(spec => spec.toLowerCase().trim() === srv.name.toLowerCase().trim())
+                    );
+                }
+                
+                if (selectChStylist) {
+                    selectChStylist.innerHTML = filteredStylists.map(st => `<option value="${st.nombre}">${st.nombre}</option>`).join('');
+                    
+                    if (prevStylistVal && filteredStylists.some(st => st.nombre === prevStylistVal)) {
+                        selectChStylist.value = prevStylistVal;
+                    } else if (filteredStylists.length > 0) {
+                        selectChStylist.value = filteredStylists[0].nombre;
+                    }
+                }
+
+                handleCheckoutProductAddon();
+                document.getElementById('checkout-status-text').innerText = "Venta directa configurada.";
+
+            } else {
+                selectSrv.disabled = true;
+                if (selectChStylist) selectChStylist.disabled = true;
+                badge.innerText = "TICKET CONGELADO";
+                badge.className = "text-[8px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded animate-pulse";
+
+                const [st, hr] = target.split('|');
+                const app = sched[st][hr];
+                if (app) {
+                    const matched = state.services.find(s => s.name === app.service);
+                    if (matched) {
+                        selectSrv.innerHTML = `<option value="${matched.id}">${matched.name}</option>`;
+                        selectSrv.value = matched.id;
+                    }
+                    if (selectChStylist) {
+                        selectChStylist.innerHTML = `<option value="${st}">${st}</option>`;
+                        selectChStylist.value = st;
+                    }
+                    
+                    handleCheckoutProductAddon();
+                    
+                    if (app.status === 'Cobrado') {
+                        document.getElementById('checkout-status-text').innerText = `La cita de ${app.customer} ya ha sido cobrada.`;
+                    } else {
+                        document.getElementById('checkout-status-text').innerText = `Listo para validar cobro de ${app.customer}.`;
+                    }
+                }
+            }
+
+            const selectLockStylist = document.getElementById('lock-stylist');
+            if (selectLockStylist && selectLockStylist.innerHTML.trim() === '') {
+                selectLockStylist.innerHTML = `<option value="">-- Todos --</option>` + state.stylists.map(st => `<option value="${st.nombre}">${st.nombre}</option>`).join('');
+            }
+            
+            const selectLockSrv = document.getElementById('lock-service');
+            if (selectLockSrv && selectLockSrv.innerHTML.trim() === '') {
+                selectLockSrv.innerHTML = state.services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                updateLockCostPreview();
+            }
+
+            validateCheckoutSubmitButton();
+        }
+
+        function handleCheckoutAppSelection() {
+            const selectApp = document.getElementById('checkout-appointment-select');
+            const selectSrv = document.getElementById('checkout-service-select');
+            const selectChStylist = document.getElementById('checkout-stylist-select');
+            const selectAddon = document.getElementById('checkout-product-addon');
+            const badge = document.getElementById('checkout-badge-status');
+            
+            const target = selectApp.value;
+            selectAddon.value = "none";
+            document.getElementById('checkout-payment-method').value = ""; // Reset payment method
+
+            if (target === 'direct') {
+                selectSrv.disabled = false;
+                if (selectChStylist) selectChStylist.disabled = false;
+                badge.innerText = "VENTA DIRECTA";
+                badge.className = "text-[8px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded";
+                
+                selectSrv.innerHTML = state.services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                handlePOSServiceChange();
+            } else {
+                selectSrv.disabled = true;
+                if (selectChStylist) selectChStylist.disabled = true;
+                badge.innerText = "TICKET CONGELADO";
+                badge.className = "text-[8px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded animate-pulse";
+                
+                const [st, hr] = target.split('|');
+                const app = getActiveSchedule()[st][hr];
+                
+                const matched = state.services.find(s => s.name === app.service);
+                if (matched) {
+                    selectSrv.innerHTML = `<option value="${matched.id}">${matched.name}</option>`;
+                    selectSrv.value = matched.id;
+                }
+                if (selectChStylist) {
+                    selectChStylist.innerHTML = `<option value="${st}">${st}</option>`;
+                    selectChStylist.value = st;
+                }
+
+                document.getElementById('checkout-amount-display').value = app.cost.toLocaleString('es-MX', {minimumFractionDigits: 2});
+                
+                if (app.status === 'Cobrado') {
+                    document.getElementById('checkout-status-text').innerText = `La cita de ${app.customer} ya ha sido cobrada.`;
+                } else {
+                    document.getElementById('checkout-status-text').innerText = `Listo para validar cobro de ${app.customer}.`;
+                }
+            }
+            validateCheckoutSubmitButton();
+        }
+
+        function handlePaymentMethodChange() {
+            validateCheckoutSubmitButton();
+        }
+
+        function validateCheckoutSubmitButton() {
+            const target = document.getElementById('checkout-appointment-select').value;
+            const paymentMethod = document.getElementById('checkout-payment-method').value;
+            const submitBtn = document.getElementById('btn-submit-payment');
+            
+            let isAlreadyPaid = false;
+            if (target !== 'direct') {
+                const [st, hr] = target.split('|');
+                const sched = getActiveSchedule();
+                const app = sched[st] ? sched[st][hr] : null;
+                if (app && app.status === 'Cobrado') {
+                    isAlreadyPaid = true;
+                }
+            }
+
+            const isValidPaymentMethod = (paymentMethod === 'Efectivo' || paymentMethod === 'Tarjeta' || paymentMethod === 'Transferencia');
+
+            if (!isAlreadyPaid && isValidPaymentMethod) {
+                submitBtn.disabled = false;
+                submitBtn.className = "w-full mt-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-zinc-950 font-black py-2.5 rounded-lg text-xs uppercase cursor-pointer shadow-glow-emerald";
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.className = "w-full mt-4 bg-zinc-800 text-zinc-500 cursor-not-allowed font-black py-2.5 rounded-lg text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2";
+            }
+        }
+
+        function handleCheckoutServiceChange() {
+            const id = document.getElementById('checkout-service-select').value;
+            const srv = state.services.find(s => s.id == id);
+            if (srv) {
+                document.getElementById('checkout-amount-display').value = srv.price.toLocaleString('es-MX', {minimumFractionDigits: 2});
+                document.getElementById('checkout-status-text').innerText = "Venta directa configurada.";
+                validateCheckoutSubmitButton();
+            }
+        }
+
+        function handleCheckoutProductAddon() {
+            const target = document.getElementById('checkout-appointment-select').value;
+            const addonKey = document.getElementById('checkout-product-addon').value;
+            
+            let baseAmt = 0;
+            if (target === 'direct') {
+                const id = document.getElementById('checkout-service-select').value;
+                const matched = state.services.find(s => s.id == id);
+                baseAmt = matched ? matched.price : 0;
+            } else {
+                const [st, hr] = target.split('|');
+                baseAmt = getActiveSchedule()[st][hr].cost;
+            }
+
+            let extra = 0;
+            if (addonKey === 'shampoo') extra = state.inventory['shampoo_retail'].price;
+            if (addonKey === 'mask') extra = state.inventory['mask_retail'].price;
+
+            const total = baseAmt + extra;
+            document.getElementById('checkout-amount-display').value = total.toLocaleString('es-MX', {minimumFractionDigits: 2});
+        }
+
+        async function commitSecureCheckoutPayment() {
+            const target = document.getElementById('checkout-appointment-select').value;
+            const srvId = document.getElementById('checkout-service-select').value;
+            const addonKey = document.getElementById('checkout-product-addon').value;
+            const paymentMethod = document.getElementById('checkout-payment-method').value;
+            const sched = getActiveSchedule();
+
+            if (!paymentMethod) {
+                triggerToast("Seleccione un método de pago obligatorio.", "error");
+                return;
+            }
+
+            let customerName = "Venta Directa";
+            let serviceName = "";
+            let basePrice = 0;
+            let stylistName = "";
+            let appObj = null;
+
+            if (target !== 'direct') {
+                const [st, hr] = target.split('|');
+                appObj = sched[st][hr];
+                customerName = appObj.customer;
+                serviceName = appObj.service;
+                basePrice = appObj.cost;
+                stylistName = st;
+            } else {
+                const srv = state.services.find(s => s.id == srvId);
+                serviceName = srv ? srv.name : "";
+                basePrice = srv ? srv.price : 0;
+                stylistName = document.getElementById('checkout-stylist-select').value;
+            }
+
+            let extraPrice = 0;
+            let extraCost = 0;
+            let retailComm = 0;
+
+            // Handle Addon Inventory
+            if (addonKey === 'shampoo') {
+                const item = state.inventory['shampoo_retail'];
+                if (item.stock > 0) {
+                    await fetchAPI('/api/inventario/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key_name: 'shampoo_retail', stock: item.stock - 1 })
+                    });
+                    extraPrice += item.price;
+                    extraCost += 200;
+                    retailComm = Math.round(item.price * 0.1);
+                } else {
+                    triggerToast("Stock de Shampoo agotado.", "error");
+                    return;
+                }
+            } else if (addonKey === 'mask') {
+                const item = state.inventory['mask_retail'];
+                if (item.stock > 0) {
+                    await fetchAPI('/api/inventario/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key_name: 'mask_retail', stock: item.stock - 1 })
+                    });
+                    extraPrice += item.price;
+                    extraCost += 300;
+                    retailComm = Math.round(item.price * 0.1);
+                } else {
+                    triggerToast("Stock de Mascarilla agotado.", "error");
+                    return;
+                }
+            }
+
+            // Consume inventory materials for service
+            const matchedService = state.services.find(s => s.name === serviceName);
+            if (matchedService && matchedService.stockKey) {
+                const item = state.inventory[matchedService.stockKey];
+                if (item.stock >= matchedService.stockQty) {
+                    await fetchAPI('/api/inventario/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key_name: matchedService.stockKey, stock: item.stock - matchedService.stockQty })
+                    });
+                }
+            }
+
+            const finalTotal = basePrice + extraPrice;
+            
+            // Algoritmo de Comisiones Blindadas
+            let svcComm = 0;
+            const normSrvName = serviceName.toLowerCase();
+            if (normSrvName.includes('nanoplastia')) {
+                const productCost = 1000;
+                svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
+            } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage')) {
+                const productCost = 300;
+                svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
+            } else if (normSrvName.includes('uña') || normSrvName.includes('man-ped')) {
+                svcComm = Math.round(basePrice * 0.45);
+            } else if (normSrvName.includes('pestaña') || normSrvName.includes('corte')) {
+                svcComm = Math.round(basePrice * 0.40);
+            } else {
+                svcComm = Math.round(basePrice * 0.30);
+            }
+            
+            const totalComm = svcComm + retailComm;
+
+            const now = new Date();
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            // Add Nomina Item
+            await fetchAPI('/api/nomina/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stylist: stylistName,
+                    service: addonKey !== 'none' ? `${serviceName} + Prod (${paymentMethod})` : `${serviceName} (${paymentMethod})`,
+                    amount: finalTotal,
+                    commission: totalComm,
+                    type: "checkout",
+                    date: dateStr
+                })
+            });
+
+            // Update app status in DB
+            if (appObj) {
+                await fetchAPI(`/api/citas/${appObj.id}/update-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: 'confirmada' })
+                });
+                await pushAuditLog(`POS: Cobro validado de [${customerName}] por $${finalTotal} MXN usando ${paymentMethod}.`);
+} else {
+                await pushAuditLog(`POS: Venta directa cobrada por $${finalTotal} MXN usando ${paymentMethod}.`);
+            }
+
+            triggerToast(`Transacción validada por $${finalTotal} MXN.`, "success");
+            document.getElementById('checkout-appointment-select').value = "direct";
+            loadState();
+        }
+
+        // DYNAMIC FILTERING & CROSS-VALIDATION SELECTORS
+        function handlePOSStylistChange() {
+            handleCheckoutServiceChange();
+        }
+
+        function handlePOSServiceChange() {
+            const serviceId = document.getElementById('checkout-service-select').value;
+            const selectSt = document.getElementById('checkout-stylist-select');
+            const srv = state.services.find(s => s.id == serviceId);
+            
+            if (!srv) {
+                selectSt.innerHTML = state.stylists.map(st => `<option value="${st.nombre}">${st.nombre}</option>`).join('');
+                handleCheckoutServiceChange();
+                return;
+            }
+
+            const currentVal = selectSt.value;
+            const filtered = state.stylists.filter(st => 
+                st.especialidades.some(spec => spec.toLowerCase().trim() === srv.name.toLowerCase().trim())
+            );
+            
+            selectSt.innerHTML = filtered.map(st => `<option value="${st.nombre}">${st.nombre}</option>`).join('');
+            if (currentVal && filtered.some(st => st.nombre === currentVal)) {
+                selectSt.value = currentVal;
+            }
+            
+            handleCheckoutServiceChange();
+        }
+
+        function handleLockStylistChange() {
+            updateLockCostPreview();
+        }
+
+        function handleLockServiceChange() {
+            const serviceId = document.getElementById('lock-service').value;
+            const selectSt = document.getElementById('lock-stylist');
+            const srv = state.services.find(s => s.id == serviceId);
+            
+            if (!srv) {
+                selectSt.innerHTML = `<option value="">-- Todos --</option>` + state.stylists.map(st => `<option value="${st.nombre}">${st.nombre}</option>`).join('');
+                updateLockCostPreview();
+                return;
+            }
+
+            const currentVal = selectSt.value;
+            const filtered = state.stylists.filter(st => 
+                st.especialidades.some(spec => spec.toLowerCase().trim() === srv.name.toLowerCase().trim())
+            );
+            
+            selectSt.innerHTML = `<option value="">-- Todos --</option>` + filtered.map(st => `<option value="${st.nombre}">${st.nombre}</option>`).join('');
+            if (currentVal && filtered.some(st => st.nombre === currentVal)) {
+                selectSt.value = currentVal;
+            }
+            
+            updateLockCostPreview();
+        }
+
+
+
+        // WHATSAPP CONSOLE LOGIC
+        async function loadWhatsAppChats() {
+            const chatsData = await fetchAPI('/api/chats');
+            if (chatsData) {
+                state.chats = chatsData;
+                document.getElementById('whatsapp-chats-count').innerText = chatsData.length;
+                renderChatsList();
+            }
+        }
+
+        function renderChatsList() {
+            const list = document.getElementById('whatsapp-chats-list');
+            list.innerHTML = '';
+            
+            if (state.chats.length === 0) {
+                list.innerHTML = '<div class="p-8 text-center text-zinc-500 text-xs">No hay chats registrados.</div>';
+                return;
+            }
+
+            state.chats.forEach(chat => {
+                const isSelected = state.selectedChat && state.selectedChat.chat_id_whatsapp === chat.chat_id_whatsapp;
+                const button = document.createElement('button');
+                button.className = `w-full text-left p-4 transition-all flex items-start space-x-3 border-b border-zinc-800/40 ${
+                    isSelected ? 'bg-zinc-850/80 border-l-4 border-l-emerald-500' : 'hover:bg-zinc-900/50'
+                }`;
+                
+                button.onclick = () => selectChat(chat);
+
+                button.innerHTML = `
+                    <div class="w-9 h-9 rounded-full bg-zinc-850 flex items-center justify-center font-bold text-zinc-350 shrink-0">
+                        ${chat.nombre_cliente.charAt(0)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold text-xs text-zinc-200 truncate">${chat.nombre_cliente}</span>
+                            <span class="w-2 h-2 rounded-full ${chat.bot_activo ? 'bg-emerald-500 animate-pulse' : 'bg-purple-500'}" title="${chat.bot_activo ? 'Asistente Elena Activo' : 'Soporte Humano'}"></span>
+                        </div>
+                        <p class="text-[10px] text-zinc-500 truncate font-mono mt-0.5">${chat.chat_id_whatsapp}</p>
+                        <p class="text-xs text-zinc-400 mt-1 truncate italic">${chat.ultimo_mensaje || 'Sin mensajes'}</p>
+                    </div>
+                `;
+                list.appendChild(button);
+            });
+        }
+
+        async function selectChat(chat) {
+            state.selectedChat = chat;
+            document.getElementById('chat-window-empty').classList.add('hidden');
+            const activeWindow = document.getElementById('chat-window-active');
+            activeWindow.classList.remove('hidden');
+
+            document.getElementById('active-chat-avatar').innerText = chat.nombre_cliente.charAt(0);
+            document.getElementById('active-chat-name').innerText = chat.nombre_cliente;
+            document.getElementById('active-chat-phone').innerText = chat.chat_id_whatsapp;
+            document.getElementById('active-chat-zone').innerText = chat.zona_geografica || 'No definida';
+
+            // Sync toggle button
+            const btnToggle = document.getElementById('btn-toggle-bot');
+            const switchDot = document.getElementById('toggle-bot-switch-dot');
+            const iconBot = document.getElementById('active-chat-bot-icon');
+            const banner = document.getElementById('bot-active-banner');
+
+            if (chat.bot_activo) {
+                btnToggle.className = "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-emerald-500 shadow-glow-emerald";
+                switchDot.className = "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5";
+                iconBot.className = "w-4 h-4 text-emerald-400";
+                banner.className = "bg-emerald-950/20 border-t border-emerald-900/40 px-4 py-2 flex items-center space-x-2 text-xs text-emerald-400 font-medium shrink-0";
+            } else {
+                btnToggle.className = "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-zinc-700";
+                switchDot.className = "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0";
+                iconBot.className = "w-4 h-4 text-zinc-500";
+                banner.className = "hidden";
+            }
+
+            // Sync Simulator client phone/name inputs
+            document.getElementById('sim-client-name').value = chat.nombre_cliente;
+            document.getElementById('sim-client-phone').value = chat.chat_id_whatsapp;
+            document.getElementById('sim-new-client-fields').className = "hidden"; // hide fields since client exists
+
+            loadChatMessages(chat.chat_id_whatsapp);
+            renderChatsList();
+        }
+
+        async function loadChatMessages(chatId) {
+            const msgs = await fetchAPI(`/api/chats/${chatId}/messages`);
+            if (msgs) {
+                state.messages = msgs;
+                renderChatMessages();
+            }
+        }
+
+        function renderChatMessages() {
+            const box = document.getElementById('chat-messages-box');
+            box.innerHTML = '';
+            
+            if (state.messages.length === 0) {
+                box.innerHTML = '<div class="p-8 text-center text-zinc-500 text-xs">Sin mensajes en el historial.</div>';
+                return;
+            }
+
+            state.messages.forEach(msg => {
+                const isClient = msg.remitente === 'cliente';
+                const isBot = msg.remitente === 'bot';
+                const isHuman = msg.remitente === 'humano';
+
+                const wrapper = document.createElement('div');
+                wrapper.className = `flex ${isClient ? 'justify-start' : 'justify-end'}`;
+
+                const timeStr = new Date(msg.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                wrapper.innerHTML = `
+                    <div class="max-w-[75%] rounded-2xl px-4 py-2.5 shadow-md ${
+                        isClient
+                        ? 'bg-zinc-800/80 text-zinc-100 rounded-tl-none border border-zinc-700/50'
+                        : isBot
+                        ? 'bg-gradient-to-br from-emerald-950/80 to-emerald-900/80 text-emerald-100 border border-emerald-800/60 rounded-tr-none'
+                        : 'bg-gradient-to-br from-purple-950/80 to-purple-900/80 text-purple-100 border border-purple-800/60 rounded-tr-none'
+                    }">
+                        <div class="flex items-center space-x-1.5 mb-1">
+                            ${isBot ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-semibold px-1.5 py-0.5 rounded-md">Elena IA</span>' : ''}
+                            ${isHuman ? '<span class="text-[10px] bg-purple-500/20 text-purple-300 font-semibold px-1.5 py-0.5 rounded-md">Soporte</span>' : ''}
+                            ${isClient ? `<span class="text-[10px] text-zinc-400 font-semibold">${state.selectedChat.nombre_cliente}</span>` : ''}
+                            <span class="text-[9px] text-zinc-500">${timeStr}</span>
+                        </div>
+                        <p class="text-xs leading-relaxed break-words whitespace-pre-wrap">${msg.texto}</p>
+                    </div>
+                `;
+                box.appendChild(wrapper);
+            });
+
+            // Scroll to bottom
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function toggleActiveChatBot() {
+            if (!state.selectedChat) return;
+            const newStatus = !state.selectedChat.bot_activo;
+            const updated = await fetchAPI(`/api/chats/${state.selectedChat.chat_id_whatsapp}/toggle-bot`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bot_activo: newStatus })
+            });
+
+            if (updated) {
+                state.selectedChat.bot_activo = updated.bot_activo;
+                selectChat(state.selectedChat);
+            }
+        }
+
+        async function handleSendSupportMessage(event) {
+            event.preventDefault();
+            if (!state.selectedChat) return;
+            const input = document.getElementById('input-support-message');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            input.value = '';
+            const saved = await fetchAPI(`/api/chats/${state.selectedChat.chat_id_whatsapp}/send-message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+
+            if (saved) {
+                loadChatMessages(state.selectedChat.chat_id_whatsapp);
+            }
+        }
+
+        // WHATSAPP SIMULATOR FORM SUBMIT
+        async function handleSimulateClientMessage(event) {
+            event.preventDefault();
+            const msgInput = document.getElementById('sim-client-message');
+            const message = msgInput.value.trim();
+            if (!message) return;
+
+            msgInput.value = '';
+
+            let chatId = '';
+            let clientName = '';
+
+            if (state.selectedChat) {
+                chatId = state.selectedChat.chat_id_whatsapp;
+                clientName = state.selectedChat.nombre_cliente;
+            } else {
+                chatId = document.getElementById('sim-client-phone').value.trim();
+                clientName = document.getElementById('sim-client-name').value.trim();
+                if (!chatId || !clientName) {
+                    triggerToast("Debe seleccionar un cliente o escribir su nombre y teléfono.", "warning");
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('btn-submit-simulation');
+            btn.disabled = true;
+            btn.innerHTML = `<span>Procesando...</span>`;
+
+            const res = await fetchAPI('/webhook/whatsapp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chatId, message, clienteNombre: clientName })
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = `<span>Enviar como Cliente</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>`;
+            lucide.createIcons();
+
+            if (res) {
+                // If it was a new client, reload chat list
+                if (!state.selectedChat) {
+                    document.getElementById('sim-client-phone').value = '';
+                    document.getElementById('sim-client-name').value = '';
+                    await loadWhatsAppChats();
+                    // Select this new chat
+                    const newChat = state.chats.find(c => c.chat_id_whatsapp === chatId);
+                    if (newChat) selectChat(newChat);
+                } else {
+                    // Update and load messages
+                    loadChatMessages(chatId);
+                }
+            }
+        }
+
+        // SYSTEM RENDER GENERAL MODULES
+        function renderLogs() {
+            const term = document.getElementById('audit-log-terminal');
+            term.innerHTML = '';
+            state.logs.forEach(log => {
+                const line = document.createElement('div');
+                line.className = "text-[10px] leading-relaxed border-b border-zinc-900 pb-0.5";
+                line.innerHTML = `<span class="text-zinc-650 font-bold">[${log.time}]</span> <span class="text-emerald-500 font-semibold">[${log.user}]</span> <span class="text-zinc-350">${log.txt}</span>`;
+                term.appendChild(line);
+            });
+        }
+
+        function renderPayrollModule() {
+            const summaryBox = document.getElementById('stylist-payroll-summary-box');
+            summaryBox.innerHTML = '';
+            const comms = {};
+            stylistsArray.forEach(name => {
+                comms[name] = 0;
+            });
+            
+            state.payroll.forEach(p => {
+                if (comms[p.stylist] !== undefined) comms[p.stylist] += p.commission;
+            });
+
+            let grandTotal = 0;
+            stylistsArray.forEach(name => {
+                grandTotal += comms[name];
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between border-b border-zinc-800 pb-1 last:border-0 last:pb-0";
+                row.innerHTML = `
+                    <span class="text-zinc-300 font-medium">${name}</span>
+                    <span class="font-mono font-bold text-emerald-400">$${comms[name].toLocaleString('es-MX')}</span>
+                `;
+                summaryBox.appendChild(row);
+            });
+            document.getElementById('payroll-total-commission').innerText = `$${grandTotal.toLocaleString('es-MX')}`;
+        }
+
+        function render() {
+            const sched = getActiveSchedule();
+            let totalAppts = 0;
+            let occupiedHours = 0;
+
+            stylistsArray.forEach(st => {
+                let stylistOccupied = 0;
+                Object.keys(sched[st]).forEach(hr => {
+                    const block = sched[st][hr];
+                    if (block) {
+                        stylistOccupied++;
+                        occupiedHours++;
+                        if (block.type !== 'parent') {
+                            totalAppts++;
+                        }
+                    }
+                });
+
+                // Individual stylist efficiency
+                const eff = Math.round((stylistOccupied / 9) * 100);
+                const effEl = document.getElementById(`effic-${st}`);
+                if (effEl) {
+                    effEl.innerText = `Efic: ${eff}%`;
+                    if (eff >= 80) effEl.className = "block text-[9px] font-mono text-emerald-400 font-bold";
+                    else if (eff >= 50) effEl.className = "block text-[9px] font-mono text-amber-400 font-semibold";
+                    else effEl.className = "block text-[9px] font-mono text-zinc-500";
+                }
+            });
+
+            // Set metric texts
+            document.getElementById('stat-citas').innerText = totalAppts;
+            document.getElementById('stat-caja').innerText = `$${state.cajaTotalizada.toLocaleString('es-MX')}`;
+            document.getElementById('stat-gastos').innerText = `$${state.gastosTotales.toLocaleString('es-MX')}`;
+            document.getElementById('stat-neto').innerText = `$${(state.cajaTotalizada - state.gastosTotales).toLocaleString('es-MX')}`;
+
+            renderInventoryModule();
+            renderServicesRates();
+            renderMonthlyCalendar();
+            renderAgendaGrid();
+            populateCheckoutFormWidgets();
+            renderPayrollModule();
+            renderLogs();
+
+            // Populate selector of services in lock form if needed
+            const selectSrv = document.getElementById('lock-service');
+            if (selectSrv.innerHTML.trim() === '') {
+                selectSrv.innerHTML = state.services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                updateLockCostPreview();
+            }
+
+            lucide.createIcons();
+        }
+
+        // Live Header Clock
+        setInterval(() => {
+            const timerEl = document.getElementById('live-timer');
+            if (timerEl) {
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                timerEl.innerText = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+            }
+        }, 1000);
+
+        // Polling loop for real-time CRM updates
+        setInterval(() => {
+            if (state.activeTab === 'dashboard') {
+                loadState();
+            } else if (state.activeTab === 'whatsapp') {
+                loadWhatsAppChats();
+                if (state.selectedChat) {
+                    loadChatMessages(state.selectedChat.chat_id_whatsapp);
+                }
+            }
+        }, 4000);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            switchUser('Tony');
+            loadState();
+        });
+    </script>
+</body>
+</html>

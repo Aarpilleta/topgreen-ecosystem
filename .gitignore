@@ -1,0 +1,20 @@
+# Dependency directories
+node_modules/
+whatsapp-backend/node_modules/
+crm-frontend/node_modules/
+
+# Local env files
+.env
+whatsapp-backend/.env
+crm-frontend/.env
+crm-frontend/.env.local
+
+# Production builds
+crm-frontend/.next/
+crm-frontend/out/
+
+# Database fallbacks and local logs
+whatsapp-backend/db_fallback.json
+*.log
+.pnp
+.pnp.js
