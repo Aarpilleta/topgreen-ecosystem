@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        destination: 'https://topgreen-ecosystem.onrender.com/:path*',
+        permanent: false,
+      },
+    ]
+  },
 };
 
 export default nextConfig;
