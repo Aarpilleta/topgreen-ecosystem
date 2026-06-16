@@ -26,12 +26,13 @@ const initialData = {
     { id: 1, nombre: 'Pili', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#10b981', activo: true },
     { id: 2, nombre: 'Joel', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#3b82f6', activo: true },
     { id: 3, nombre: 'Rose', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Depilación IPL', 'Pestañas', 'Lifting', 'Maquillaje', 'Botox Capilar'], color: '#a855f7', activo: true },
-    { id: 4, nombre: 'Majo', especialidades: ['Uñas', 'Pestañas'], color: '#ec4899', activo: true },
+    { id: 4, nombre: 'Majo', especialidades: ['Uñas', 'Pestañas', 'Lifting'], color: '#ec4899', activo: true },
     { id: 5, nombre: 'Cande', especialidades: ['Uñas'], color: '#f43f5e', activo: true },
     { id: 6, nombre: 'Judith', especialidades: ['Uñas'], color: '#f59e0b', activo: true },
-    { id: 7, nombre: 'Laura', especialidades: ['Uñas'], color: '#14b8a6', activo: true },
+    { id: 7, nombre: 'Laura', especialidades: ['Uñas', 'Lifting'], color: '#14b8a6', activo: true },
     { id: 8, nombre: 'Lizbeth', especialidades: ['Microblading', 'Micropigmentación'], color: '#d97706', activo: true },
-    { id: 9, nombre: 'Fran', especialidades: ['Corte Premium'], color: '#6366f1', activo: true }
+    { id: 9, nombre: 'Fran', especialidades: ['Corte Premium'], color: '#6366f1', activo: true },
+    { id: 10, nombre: 'Tony', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar', 'Depilación IPL', 'Uñas', 'Pestañas', 'Lifting', 'Maquillaje', 'Microblading', 'Micropigmentación'], color: '#06b6d4', activo: true }
   ],
   inventario: [
     { key_name: 'nanoplastia_elixir', nombre: 'Elixir Nanoplastia (ml)', stock: 1500, min: 500, cost_per_unit: 1.50, price: null, item_type: 'insumo' },
@@ -412,6 +413,40 @@ const db = {
 
   async updateAppointment(id, updateFields) {
     if (!useFallback) {
+      let customerVal = updateFields.customer;
+      if (updateFields.phone !== undefined) {
+        if (updateFields.phone) {
+          const cleanPhone = updateFields.phone.replace(/\D/g, '');
+          if (cleanPhone) {
+            let nameToUse = updateFields.customer;
+            if (!nameToUse) {
+              const currentCita = await pool.query(`
+                SELECT c.cliente_id, COALESCE(cc.nombre_cliente, c.cliente_id) AS nombre_cliente
+                FROM citas c
+                LEFT JOIN control_chats cc ON c.cliente_id = cc.chat_id_whatsapp
+                WHERE c.id = $1
+              `, [id]);
+              nameToUse = currentCita.rows.length > 0 ? currentCita.rows[0].nombre_cliente : 'Cliente';
+            }
+            const chatRes = await pool.query('SELECT * FROM control_chats WHERE chat_id_whatsapp = $1', [cleanPhone]);
+            if (chatRes.rows.length === 0) {
+              await pool.query(
+                'INSERT INTO control_chats (chat_id_whatsapp, nombre_cliente) VALUES ($1, $2)',
+                [cleanPhone, nameToUse]
+              );
+            } else if (updateFields.customer) {
+              await pool.query(
+                'UPDATE control_chats SET nombre_cliente = $1 WHERE chat_id_whatsapp = $2',
+                [updateFields.customer, cleanPhone]
+              );
+            }
+            customerVal = cleanPhone;
+          }
+        } else {
+          customerVal = updateFields.customer;
+        }
+      }
+
       let query = 'UPDATE citas SET ';
       const params = [];
       let paramIndex = 1;
@@ -430,9 +465,9 @@ const db = {
         paramIndex++;
       }
 
-      if (updateFields.customer !== undefined) {
+      if (customerVal !== undefined) {
         query += `cliente_id = $${paramIndex}, `;
-        params.push(updateFields.customer);
+        params.push(customerVal);
         paramIndex++;
       }
 
@@ -452,11 +487,47 @@ const db = {
         paramIndex++;
       }
 
+      let newStartTime = null;
       if (updateFields.date !== undefined && updateFields.hour !== undefined) {
-        const startTime = new Date(updateFields.date + 'T' + updateFields.hour + ':00-06:00');
+        newStartTime = new Date(updateFields.date + 'T' + updateFields.hour + ':00-06:00');
         query += `fecha_hora_inicio = $${paramIndex}, `;
-        params.push(startTime.toISOString());
+        params.push(newStartTime.toISOString());
         paramIndex++;
+      }
+
+      let durationHours = updateFields.duration !== undefined ? Number(updateFields.duration) : null;
+      if (durationHours !== null || newStartTime !== null) {
+        let finalStart = newStartTime;
+        if (!finalStart) {
+          const current = await pool.query('SELECT fecha_hora_inicio FROM citas WHERE id = $1', [id]);
+          if (current.rows.length > 0) {
+            finalStart = new Date(current.rows[0].fecha_hora_inicio);
+          }
+        }
+        
+        if (durationHours === null) {
+          const current = await pool.query(`
+            SELECT c.fecha_hora_inicio, c.fecha_hora_fin, s.duracion_minutos 
+            FROM citas c 
+            LEFT JOIN servicios s ON s.id = c.servicio_id 
+            WHERE c.id = $1
+          `, [id]);
+          if (current.rows.length > 0) {
+            const start = new Date(current.rows[0].fecha_hora_inicio);
+            const end = new Date(current.rows[0].fecha_hora_fin);
+            durationHours = (end - start) / (60 * 60 * 1000);
+            if (isNaN(durationHours) || durationHours <= 0) {
+              durationHours = (current.rows[0].duracion_minutos || 60) / 60;
+            }
+          }
+        }
+
+        if (finalStart && durationHours) {
+          const endTime = new Date(finalStart.getTime() + durationHours * 60 * 60000);
+          query += `fecha_hora_fin = $${paramIndex}, `;
+          params.push(endTime.toISOString());
+          paramIndex++;
+        }
       }
 
       if (params.length === 0) {
@@ -474,6 +545,24 @@ const db = {
       const data = loadFallback();
       const cita = data.citas.find(c => c.id === Number(id));
       if (cita) {
+        let customerVal = updateFields.customer;
+        if (updateFields.phone !== undefined) {
+          if (updateFields.phone) {
+            const cleanPhone = updateFields.phone.replace(/\D/g, '');
+            if (cleanPhone) {
+              if (!data.control_chats) data.control_chats = [];
+              let nameToUse = updateFields.customer || (data.control_chats.find(ch => ch.chat_id_whatsapp === cita.cliente_id) || {}).nombre_cliente || cita.cliente_id;
+              const chat = data.control_chats.find(ch => ch.chat_id_whatsapp === cleanPhone);
+              if (!chat) {
+                data.control_chats.push({ chat_id_whatsapp: cleanPhone, nombre_cliente: nameToUse });
+              } else if (updateFields.customer) {
+                chat.nombre_cliente = updateFields.customer;
+              }
+              customerVal = cleanPhone;
+            }
+          }
+        }
+
         if (updateFields.estado !== undefined || updateFields.status !== undefined) {
           const val = updateFields.status !== undefined ? updateFields.status : updateFields.estado;
           cita.estado = (val === 'Cobrado' || val === 'confirmada' ? 'confirmada' : 'anticipo_pendiente');
@@ -481,8 +570,8 @@ const db = {
         if (updateFields.link_comprobante !== undefined || updateFields.formula !== undefined) {
           cita.link_comprobante = updateFields.formula !== undefined ? updateFields.formula : updateFields.link_comprobante;
         }
-        if (updateFields.customer !== undefined) {
-          cita.cliente_id = updateFields.customer;
+        if (customerVal !== undefined) {
+          cita.cliente_id = customerVal;
         }
         if (updateFields.stylist !== undefined) {
           const sty = data.estilistas.find(e => e.nombre === updateFields.stylist);
@@ -492,12 +581,27 @@ const db = {
           const svc = data.servicios.find(s => s.nombre === updateFields.service);
           cita.servicio_id = svc ? svc.id : null;
         }
+
+        let newStart = cita.fecha_hora_inicio;
         if (updateFields.date !== undefined && updateFields.hour !== undefined) {
-          cita.fecha_hora_inicio = new Date(`${updateFields.date}T${updateFields.hour}:00-06:00`).toISOString();
-          const svc = data.servicios.find(s => s.id === cita.servicio_id);
-          const durationMin = svc ? svc.duracion_minutos : 60;
-          cita.fecha_hora_fin = new Date(new Date(cita.fecha_hora_inicio).getTime() + durationMin * 60000).toISOString();
+          newStart = new Date(`${updateFields.date}T${updateFields.hour}:00-06:00`).toISOString();
+          cita.fecha_hora_inicio = newStart;
         }
+
+        let durationHours = updateFields.duration !== undefined ? Number(updateFields.duration) : null;
+        if (durationHours !== null || (updateFields.date !== undefined && updateFields.hour !== undefined)) {
+          if (durationHours === null) {
+            const start = new Date(cita.fecha_hora_inicio);
+            const end = new Date(cita.fecha_hora_fin);
+            durationHours = (end - start) / (60 * 60 * 1000);
+            if (isNaN(durationHours) || durationHours <= 0) {
+              const svc = data.servicios.find(s => s.id === cita.servicio_id);
+              durationHours = (svc ? svc.duracion_minutos : 60) / 60;
+            }
+          }
+          cita.fecha_hora_fin = new Date(new Date(cita.fecha_hora_inicio).getTime() + durationHours * 60 * 60000).toISOString();
+        }
+
         saveFallback(data);
         return cita;
       }
@@ -593,22 +697,46 @@ const db = {
   // 8. Custom Appointment Control (Create & Delete)
   async createAppointment(app) {
     if (!useFallback) {
-      const svcRes = await pool.query('SELECT id FROM servicios WHERE nombre = $1', [app.service]);
+      const svcRes = await pool.query('SELECT id, duracion_minutos FROM servicios WHERE nombre = $1', [app.service]);
       const styRes = await pool.query('SELECT id FROM estilistas WHERE nombre = $1', [app.stylist]);
       
       const svcId = svcRes.rows.length > 0 ? svcRes.rows[0].id : null;
       const styId = styRes.rows.length > 0 ? styRes.rows[0].id : null;
+      const defaultDurationMin = svcRes.rows.length > 0 ? svcRes.rows[0].duracion_minutos : 60;
       
       let startTime = new Date();
       if (app.date && app.hour) {
         startTime = new Date(app.date + 'T' + app.hour + ':00-06:00');
       }
+
+      const durationMin = app.duration ? (Number(app.duration) * 60) : defaultDurationMin;
+      const endTime = new Date(startTime.getTime() + durationMin * 60000);
+
+      let clientVal = app.customer;
+      if (app.phone) {
+        const cleanPhone = app.phone.replace(/\D/g, '');
+        if (cleanPhone) {
+          const chatRes = await pool.query('SELECT * FROM control_chats WHERE chat_id_whatsapp = $1', [cleanPhone]);
+          if (chatRes.rows.length === 0) {
+            await pool.query(
+              'INSERT INTO control_chats (chat_id_whatsapp, nombre_cliente) VALUES ($1, $2)',
+              [cleanPhone, app.customer]
+            );
+          } else {
+            await pool.query(
+              'UPDATE control_chats SET nombre_cliente = $1 WHERE chat_id_whatsapp = $2',
+              [app.customer, cleanPhone]
+            );
+          }
+          clientVal = cleanPhone;
+        }
+      }
       
       const res = await pool.query(
-        `INSERT INTO citas (cliente_id, estilista_id, servicio_id, fecha_hora_inicio, estado)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO citas (cliente_id, estilista_id, servicio_id, fecha_hora_inicio, fecha_hora_fin, estado)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [app.customer, styId, svcId, startTime.toISOString(), app.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente']
+        [clientVal, styId, svcId, startTime.toISOString(), endTime.toISOString(), app.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente']
       );
       return res.rows[0];
     } else {
@@ -621,12 +749,27 @@ const db = {
       if (app.date && app.hour) {
         startStr = new Date(`${app.date}T${app.hour}:00-06:00`).toISOString();
       }
-      const durationMin = svc ? svc.duracion_minutos : (app.duration * 60);
+      const durationMin = app.duration ? (Number(app.duration) * 60) : (svc ? svc.duracion_minutos : 60);
       const endStr = new Date(new Date(startStr).getTime() + durationMin * 60000).toISOString();
       
+      let clientVal = app.customer;
+      if (app.phone) {
+        const cleanPhone = app.phone.replace(/\D/g, '');
+        if (cleanPhone) {
+          if (!data.control_chats) data.control_chats = [];
+          const chat = data.control_chats.find(c => c.chat_id_whatsapp === cleanPhone);
+          if (!chat) {
+            data.control_chats.push({ chat_id_whatsapp: cleanPhone, nombre_cliente: app.customer });
+          } else {
+            chat.nombre_cliente = app.customer;
+          }
+          clientVal = cleanPhone;
+        }
+      }
+
       const newCita = {
         id: newId,
-        cliente_id: app.customer,
+        cliente_id: clientVal,
         estilista_id: sty ? sty.id : null,
         servicio_id: svc ? svc.id : null,
         fecha_hora_inicio: startStr,

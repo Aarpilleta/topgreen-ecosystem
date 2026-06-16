@@ -335,10 +335,14 @@
                         <input type="hidden" id="edit-slot-hour"><input type="hidden" id="edit-slot-stylist">
                         <input type="hidden" id="edit-appointment-id">
                         
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
                             <div class="sm:col-span-1">
                                 <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Cliente</label>
                                 <input type="text" id="edit-customer-name" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="sm:col-span-1">
+                                <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Contacto (Tel)</label>
+                                <input type="tel" id="edit-customer-phone" placeholder="Ej. 5215512345678" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                             </div>
                             <div class="sm:col-span-1">
                                 <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Servicio asignado</label>
@@ -824,6 +828,7 @@
                                     state.database[state.selectedDate][stylist][roundedHour] = {
                                         id: app.id,
                                         customer: app.nombre_cliente || app.cliente_id,
+                                        phone: app.cliente_id && /^\d+$/.test(app.cliente_id) ? app.cliente_id : '',
                                         service: app.servicio_nombre,
                                         duration: durationHrs,
                                         cost: Number(app.precio_fijo),
@@ -1371,6 +1376,7 @@
             if (app) {
                 document.getElementById('edit-appointment-id').value = app.id;
                 document.getElementById('edit-customer-name').value = app.customer;
+                document.getElementById('edit-customer-phone').value = app.phone || '';
                 const matched = state.services.find(s => s.name === app.service);
                 select.value = matched ? matched.id : "custom";
                 document.getElementById('edit-duration-hours').value = app.duration;
@@ -1380,6 +1386,7 @@
             } else {
                 document.getElementById('edit-appointment-id').value = '';
                 document.getElementById('edit-customer-name').value = '';
+                document.getElementById('edit-customer-phone').value = '';
                 select.value = filteredServices.length > 0 ? filteredServices[0].id : "custom";
                 document.getElementById('edit-duration-hours').value = 1;
                 document.getElementById('edit-cost-display').value = 400;
@@ -1409,6 +1416,7 @@
             const hour = document.getElementById('edit-slot-hour').value;
             const stylist = document.getElementById('edit-slot-stylist').value;
             const customer = document.getElementById('edit-customer-name').value.trim();
+            const phone = document.getElementById('edit-customer-phone').value.trim();
             const serviceId = document.getElementById('edit-service-select').value;
             const duration = parseInt(document.getElementById('edit-duration-hours').value) || 1;
             const cost = parseInt(document.getElementById('edit-cost-display').value) || 0;
@@ -1458,6 +1466,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         customer,
+                        phone,
                         service: serviceName,
                         duration,
                         cost,
@@ -1475,6 +1484,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         customer,
+                        phone,
                         service: serviceName,
                         duration,
                         cost,
@@ -1949,7 +1959,7 @@
                     });
                     extraPrice += item.price;
                     extraCost += 200;
-                    retailComm = Math.round(item.price * 0.1);
+                    retailComm = Math.round((item.price / 1.16) * 0.1);
                 } else {
                     triggerToast("Stock de Shampoo agotado.", "error");
                     return;
@@ -1964,7 +1974,7 @@
                     });
                     extraPrice += item.price;
                     extraCost += 300;
-                    retailComm = Math.round(item.price * 0.1);
+                    retailComm = Math.round((item.price / 1.16) * 0.1);
                 } else {
                     triggerToast("Stock de Mascarilla agotado.", "error");
                     return;
