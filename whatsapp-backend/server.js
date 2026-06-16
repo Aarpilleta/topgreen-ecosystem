@@ -174,6 +174,21 @@ app.post('/api/citas/:id/update-status', async (req, res) => {
   }
 });
 
+// Update appointment details generally
+app.post('/api/citas/:id/update', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const cita = await db.updateAppointment(id, req.body);
+    if (!cita) {
+      return res.status(404).json({ error: 'Cita no encontrada.' });
+    }
+    res.json(cita);
+  } catch (error) {
+    console.error('Error al actualizar cita:', error);
+    res.status(500).json({ error: 'Error al actualizar la cita.' });
+  }
+});
+
 // Get list of stylists
 app.get('/api/estilistas', async (req, res) => {
   try {
@@ -232,9 +247,9 @@ app.get('/api/nomina', async (req, res) => {
 
 // Add payroll item
 app.post('/api/nomina/create', async (req, res) => {
-  const { stylist, service, amount, commission, type, date } = req.body;
+  const { stylist, service, amount, commission, type, date, cita_id } = req.body;
   try {
-    const item = await db.addPayrollItem({ stylist, service, amount, commission, type, date });
+    const item = await db.addPayrollItem({ stylist, service, amount, commission, type, date, cita_id });
     res.json(item);
   } catch (error) {
     console.error('Error al registrar nomina:', error);

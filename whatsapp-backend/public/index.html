@@ -538,6 +538,34 @@
             }
         }
 
+        function getSelectedWeekRange() {
+            const [y, m, d] = state.selectedDate.split('-').map(Number);
+            const selDate = new Date(y, m - 1, d);
+            const selDay = selDate.getDay();
+            
+            const sunday = new Date(selDate);
+            sunday.setDate(selDate.getDate() - selDay);
+            sunday.setHours(0, 0, 0, 0);
+
+            const nextSunday = new Date(sunday);
+            nextSunday.setDate(sunday.getDate() + 7);
+            nextSunday.setHours(0, 0, 0, 0);
+
+            return { sunday, nextSunday };
+        }
+
+        function parsePayrollDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            if (dateStr.includes('T')) {
+                return new Date(dateStr);
+            }
+            const match = dateStr.match(/^(\d{2})\/(\d{2})/);
+            if (match) {
+                return new Date(new Date().getFullYear(), parseInt(match[2]) - 1, parseInt(match[1]));
+            }
+            return new Date(dateStr);
+        }
+
         const state = {
             activeTab: 'dashboard',
             currentUser: 'Tony',
@@ -674,15 +702,43 @@
         }
 
         async function loadState() {
-            // Load stylists first
-            const stylistsData = await fetchAPI('/api/estilistas');
+            // Build the array of promises to run in parallel
+            const promises = [
+                (!state.stylists || state.stylists.length === 0) ? fetchAPI('/api/estilistas') : Promise.resolve(null),
+                fetchAPI('/api/inventario'),
+                (!state.services || state.services.length === 0) ? fetchAPI('/api/servicios') : Promise.resolve(null),
+                fetchAPI('/api/nomina'),
+                fetchAPI('/api/logs'),
+                fetchAPI('/api/citas')
+            ];
+
+            const [stylistsData, inv, srv, nom, lg, appointments] = await Promise.all(promises);
+
+            // Verify if state has actually changed to avoid unnecessary DOM re-renders and scroll resets
+            const currentSignature = JSON.stringify({
+                selectedDate: state.selectedDate,
+                unitPreference: state.unitPreference,
+                currentUser: state.currentUser,
+                appointments,
+                payroll: nom,
+                inventory: inv,
+                services: state.services.length > 0 ? state.services : srv,
+                stylists: state.stylists.length > 0 ? state.stylists : stylistsData,
+                logs: lg
+            });
+
+            if (window.lastStateSignature === currentSignature) {
+                return; // Skip rendering
+            }
+            window.lastStateSignature = currentSignature;
+
+            // Load stylists first (cached unless empty)
             if (stylistsData) {
                 state.stylists = stylistsData.filter(s => s.activo);
                 stylistsArray = state.stylists.map(s => s.nombre);
             }
 
             // Load inventory
-            const inv = await fetchAPI('/api/inventario');
             if (inv) {
                 state.inventory = {};
                 inv.forEach(i => {
@@ -697,8 +753,7 @@
                 });
             }
 
-            // Load services
-            const srv = await fetchAPI('/api/servicios');
+            // Load services (cached unless empty)
             if (srv) {
                 state.services = srv.map(s => {
                     let stockKey = null;
@@ -718,7 +773,6 @@
             }
 
             // Load Nomina
-            const nom = await fetchAPI('/api/nomina');
             if (nom) {
                 state.payroll = nom.map(n => ({
                     stylist: n.stylist,
@@ -726,12 +780,12 @@
                     amount: Number(n.amount),
                     commission: Number(n.commission),
                     type: n.type,
-                    date: n.date
+                    date: n.date,
+                    cita_id: n.cita_id
                 }));
             }
 
             // Load Logs
-            const lg = await fetchAPI('/api/logs');
             if (lg) {
                 state.logs = lg.map(l => ({
                     time: l.time,
@@ -741,7 +795,6 @@
             }
 
             // Load Citas & map to slots
-            const appointments = await fetchAPI('/api/citas');
             if (appointments) {
                 // Initialize active date slots
                 state.database[state.selectedDate] = {};
@@ -796,20 +849,26 @@
                 });
             }
 
-            // Recalculate Totals (No fake or hardcoded values)
+            // Recalculate Totals (Filtered to selected week: Sunday to Sunday)
             let totalCaja = 0;
             let totalComm = 0;
             let totalProductCosts = 0;
+
+            const { sunday: sundayOfSelWeek, nextSunday: nextSundayOfSelWeek } = getSelectedWeekRange();
             
             state.payroll.forEach(p => {
-                totalCaja += p.amount;
-                totalComm += p.commission;
-                
-                const serviceNameLower = p.service.toLowerCase();
-                if (serviceNameLower.includes('nanoplastia')) {
-                    totalProductCosts += 1000;
-                } else if (serviceNameLower.includes('tinte') || serviceNameLower.includes('balayage')) {
-                    totalProductCosts += 300;
+                const pDate = parsePayrollDate(p.date);
+
+                if (pDate >= sundayOfSelWeek && pDate < nextSundayOfSelWeek) {
+                    totalCaja += p.amount;
+                    totalComm += p.commission;
+                    
+                    const serviceNameLower = p.service.toLowerCase();
+                    if (serviceNameLower.includes('nanoplastia')) {
+                        totalProductCosts += 1000;
+                    } else if (serviceNameLower.includes('tinte') || serviceNameLower.includes('balayage')) {
+                        totalProductCosts += 300;
+                    }
                 }
             });
             
@@ -943,51 +1002,27 @@
                 }
             }
 
-            // Delete original
-            await fetchAPI(`/api/citas/${sourceApp.id}`, { method: 'DELETE' });
-
-            // Try to fit at target
+            // Verify slots fit at target
             const startIdx = hoursArray.indexOf(targetHour);
             let fits = true;
             for (let i = 0; i < sourceApp.duration; i++) {
                 if (startIdx + i >= hoursArray.length) { fits = false; break; }
                 const testHr = hoursArray[startIdx + i];
-                if (sched[targetStylist][testHr]) { fits = false; break; }
+                const block = sched[targetStylist][testHr];
+                if (block && block.id !== sourceApp.id && block.type !== 'parent') { fits = false; break; }
             }
 
             if (!fits) {
                 triggerToast("Bloque de destino ocupado o bloqueado.", "error");
-                // Re-create original
-                await fetchAPI('/api/citas/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        customer: sourceApp.customer,
-                        service: sourceApp.service,
-                        duration: sourceApp.duration,
-                        cost: sourceApp.cost,
-                        status: sourceApp.status === 'Cobrado' ? 'Cobrado' : 'Pendiente',
-                        formula: sourceApp.formula,
-                        stylist: state.draggedNode.stylist,
-                        date: state.selectedDate,
-                        hour: state.draggedNode.hour
-                    })
-                });
-                loadState();
+                state.draggedNode = null;
                 return;
             }
 
-            // Create target
-            await fetchAPI('/api/citas/create', {
+            // Update original
+            await fetchAPI(`/api/citas/${sourceApp.id}/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    customer: sourceApp.customer,
-                    service: sourceApp.service,
-                    duration: sourceApp.duration,
-                    cost: sourceApp.cost,
-                    status: sourceApp.status === 'Cobrado' ? 'Cobrado' : 'Pendiente',
-                    formula: sourceApp.formula,
                     stylist: targetStylist,
                     date: state.selectedDate,
                     hour: targetHour
@@ -1400,11 +1435,6 @@
                 }
             }
 
-            // If updating, delete the old first
-            if (id) {
-                await fetchAPI(`/api/citas/${id}`, { method: 'DELETE' });
-            }
-
             // Verify slots fit
             const sched = getActiveSchedule();
             const startIdx = hoursArray.indexOf(hour);
@@ -1421,22 +1451,41 @@
                 return;
             }
 
-            // Create new
-            await fetchAPI('/api/citas/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customer,
-                    service: serviceName,
-                    duration,
-                    cost,
-                    status,
-                    formula,
-                    stylist,
-                    date: state.selectedDate,
-                    hour
-                })
-            });
+            if (id) {
+                // Update existing appointment
+                await fetchAPI(`/api/citas/${id}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer,
+                        service: serviceName,
+                        duration,
+                        cost,
+                        status,
+                        formula,
+                        stylist,
+                        date: state.selectedDate,
+                        hour
+                    })
+                });
+            } else {
+                // Create new
+                await fetchAPI('/api/citas/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer,
+                        service: serviceName,
+                        duration,
+                        cost,
+                        status,
+                        formula,
+                        stylist,
+                        date: state.selectedDate,
+                        hour
+                    })
+                });
+            }
 
             await pushAuditLog(`Agenda: Guardó bloque de [${customer}] con ${stylist} a las ${hour} ($${cost} MXN).`);
             triggerToast("Agenda actualizada.", "success");
@@ -2007,8 +2056,8 @@
             
             const totalComm = svcComm + retailComm;
 
-            const now = new Date();
-            const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const dateStr = new Date().toISOString();
+            const citaIdVal = appObj ? appObj.id : null;
 
             // Add Nomina Item
             await fetchAPI('/api/nomina/create', {
@@ -2020,7 +2069,8 @@
                     amount: finalTotal,
                     commission: totalComm,
                     type: "checkout",
-                    date: dateStr
+                    date: dateStr,
+                    cita_id: citaIdVal
                 })
             });
 
@@ -2346,8 +2396,13 @@
                 comms[name] = 0;
             });
             
+            const { sunday: sundayOfSelWeek, nextSunday: nextSundayOfSelWeek } = getSelectedWeekRange();
+
             state.payroll.forEach(p => {
-                if (comms[p.stylist] !== undefined) comms[p.stylist] += p.commission;
+                const pDate = parsePayrollDate(p.date);
+                if (pDate >= sundayOfSelWeek && pDate < nextSundayOfSelWeek) {
+                    if (comms[p.stylist] !== undefined) comms[p.stylist] += p.commission;
+                }
             });
 
             let grandTotal = 0;

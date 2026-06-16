@@ -416,15 +416,46 @@ const db = {
       const params = [];
       let paramIndex = 1;
 
-      if (updateFields.estado !== undefined) {
+      if (updateFields.estado !== undefined || updateFields.status !== undefined) {
+        const val = updateFields.status !== undefined ? updateFields.status : updateFields.estado;
         query += `estado = $${paramIndex}, `;
-        params.push(updateFields.estado);
+        params.push(val === 'Cobrado' || val === 'confirmada' ? 'confirmada' : 'anticipo_pendiente');
         paramIndex++;
       }
 
-      if (updateFields.link_comprobante !== undefined) {
+      if (updateFields.link_comprobante !== undefined || updateFields.formula !== undefined) {
+        const val = updateFields.formula !== undefined ? updateFields.formula : updateFields.link_comprobante;
         query += `link_comprobante = $${paramIndex}, `;
-        params.push(updateFields.link_comprobante);
+        params.push(val);
+        paramIndex++;
+      }
+
+      if (updateFields.customer !== undefined) {
+        query += `cliente_id = $${paramIndex}, `;
+        params.push(updateFields.customer);
+        paramIndex++;
+      }
+
+      if (updateFields.stylist !== undefined) {
+        const styRes = await pool.query('SELECT id FROM estilistas WHERE nombre = $1', [updateFields.stylist]);
+        const styId = styRes.rows.length > 0 ? styRes.rows[0].id : null;
+        query += `estilista_id = $${paramIndex}, `;
+        params.push(styId);
+        paramIndex++;
+      }
+
+      if (updateFields.service !== undefined) {
+        const svcRes = await pool.query('SELECT id FROM servicios WHERE nombre = $1', [updateFields.service]);
+        const svcId = svcRes.rows.length > 0 ? svcRes.rows[0].id : null;
+        query += `servicio_id = $${paramIndex}, `;
+        params.push(svcId);
+        paramIndex++;
+      }
+
+      if (updateFields.date !== undefined && updateFields.hour !== undefined) {
+        const startTime = new Date(updateFields.date + 'T' + updateFields.hour + ':00-06:00');
+        query += `fecha_hora_inicio = $${paramIndex}, `;
+        params.push(startTime.toISOString());
         paramIndex++;
       }
 
@@ -443,11 +474,29 @@ const db = {
       const data = loadFallback();
       const cita = data.citas.find(c => c.id === Number(id));
       if (cita) {
-        if (updateFields.estado !== undefined) {
-          cita.estado = updateFields.estado;
+        if (updateFields.estado !== undefined || updateFields.status !== undefined) {
+          const val = updateFields.status !== undefined ? updateFields.status : updateFields.estado;
+          cita.estado = (val === 'Cobrado' || val === 'confirmada' ? 'confirmada' : 'anticipo_pendiente');
         }
-        if (updateFields.link_comprobante !== undefined) {
-          cita.link_comprobante = updateFields.link_comprobante;
+        if (updateFields.link_comprobante !== undefined || updateFields.formula !== undefined) {
+          cita.link_comprobante = updateFields.formula !== undefined ? updateFields.formula : updateFields.link_comprobante;
+        }
+        if (updateFields.customer !== undefined) {
+          cita.cliente_id = updateFields.customer;
+        }
+        if (updateFields.stylist !== undefined) {
+          const sty = data.estilistas.find(e => e.nombre === updateFields.stylist);
+          cita.estilista_id = sty ? sty.id : null;
+        }
+        if (updateFields.service !== undefined) {
+          const svc = data.servicios.find(s => s.nombre === updateFields.service);
+          cita.servicio_id = svc ? svc.id : null;
+        }
+        if (updateFields.date !== undefined && updateFields.hour !== undefined) {
+          cita.fecha_hora_inicio = new Date(`${updateFields.date}T${updateFields.hour}:00-06:00`).toISOString();
+          const svc = data.servicios.find(s => s.id === cita.servicio_id);
+          const durationMin = svc ? svc.duracion_minutos : 60;
+          cita.fecha_hora_fin = new Date(new Date(cita.fecha_hora_inicio).getTime() + durationMin * 60000).toISOString();
         }
         saveFallback(data);
         return cita;
@@ -500,8 +549,8 @@ const db = {
   async addPayrollItem(item) {
     if (!useFallback) {
       const res = await pool.query(
-        'INSERT INTO nomina (stylist, service, amount, commission, type, date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [item.stylist, item.service, item.amount, item.commission, item.type, item.date]
+        'INSERT INTO nomina (stylist, service, amount, commission, type, date, cita_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [item.stylist, item.service, item.amount, item.commission, item.type, item.date, item.cita_id || null]
       );
       return res.rows[0];
     } else {
@@ -599,6 +648,9 @@ const db = {
     } else {
       const data = loadFallback();
       data.citas = data.citas.filter(c => c.id !== Number(id));
+      if (data.nomina) {
+        data.nomina = data.nomina.filter(n => n.cita_id !== Number(id));
+      }
       saveFallback(data);
       return { exito: true };
     }

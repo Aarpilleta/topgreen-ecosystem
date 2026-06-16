@@ -77,7 +77,8 @@ CREATE TABLE nomina (
     amount NUMERIC(10, 2) NOT NULL,
     commission NUMERIC(10, 2) NOT NULL,
     type VARCHAR(20) NOT NULL,
-    date VARCHAR(50) NOT NULL
+    date VARCHAR(50) NOT NULL,
+    cita_id INTEGER REFERENCES citas(id) ON DELETE CASCADE
 );
 
 -- 8. Logs Sistema Table
