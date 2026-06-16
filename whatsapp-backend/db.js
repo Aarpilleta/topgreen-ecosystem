@@ -359,7 +359,7 @@ const db = {
          FROM citas 
          WHERE estilista_id = $1 
            AND estado != 'cancelada' 
-           AND fecha_hora_inicio::date = $2::date
+           AND (fecha_hora_inicio AT TIME ZONE 'America/Mexico_City')::date = $2::date
          ORDER BY fecha_hora_inicio ASC`,
         [stylistId, dateStr]
       );
@@ -552,7 +552,7 @@ const db = {
       
       let startTime = new Date();
       if (app.date && app.hour) {
-        startTime = new Date(app.date + 'T' + app.hour + ':00');
+        startTime = new Date(app.date + 'T' + app.hour + ':00-06:00');
       }
       
       const res = await pool.query(
@@ -570,7 +570,7 @@ const db = {
       
       let startStr = new Date().toISOString();
       if (app.date && app.hour) {
-        startStr = new Date(`${app.date}T${app.hour}:00`).toISOString();
+        startStr = new Date(`${app.date}T${app.hour}:00-06:00`).toISOString();
       }
       const durationMin = svc ? svc.duracion_minutos : (app.duration * 60);
       const endStr = new Date(new Date(startStr).getTime() + durationMin * 60000).toISOString();
