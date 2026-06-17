@@ -97,6 +97,14 @@
             </button>
         </div>
 
+        <!-- Cloud Connection Status & Sync Button -->
+        <div class="flex flex-wrap items-center gap-2 bg-zinc-900/90 border border-zinc-800 p-1.5 rounded-xl">
+            <button onclick="triggerSyncCloud()" id="sync-cloud-btn" class="flex items-center space-x-1.5 px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-semibold transition-all duration-200">
+                <i data-lucide="cloud-check" class="h-3.5 w-3.5"></i>
+                <span id="sync-cloud-text">Nube: Sincronizado</span>
+            </button>
+        </div>
+
         <div class="flex items-center space-x-4">
             <div class="flex items-center space-x-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs text-zinc-400">
                 <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -626,16 +634,322 @@
         // API AJAX HELPERS
         const API_URL = '';
 
+        // Write-Ahead Log (WAL) & Offline Caching System
+        function getPendingMutations() {
+            try {
+                return JSON.parse(localStorage.getItem('topgreen_pending_mutations') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function savePendingMutations(mutations) {
+            localStorage.setItem('topgreen_pending_mutations', JSON.stringify(mutations));
+        }
+
+        function addPendingMutation(endpoint, options) {
+            const mutations = getPendingMutations();
+            const id = 'mut_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            mutations.push({
+                id,
+                endpoint,
+                method: options.method || 'POST',
+                headers: options.headers || {},
+                body: options.body || null,
+                timestamp: new Date().toISOString()
+            });
+            savePendingMutations(mutations);
+            updateSyncUI();
+            return id;
+        }
+
+        function removePendingMutation(id) {
+            let mutations = getPendingMutations();
+            mutations = mutations.filter(m => m.id !== id);
+            savePendingMutations(mutations);
+            updateSyncUI();
+        }
+
+        let lastToastTime = 0;
+        function triggerOfflineToastOnce(msg, type) {
+            const now = Date.now();
+            if (now - lastToastTime > 5000) {
+                triggerToast(msg, type);
+                lastToastTime = now;
+            }
+        }
+
+        function updateSyncUI() {
+            const btn = document.getElementById('sync-cloud-btn');
+            if (!btn) return;
+
+            const pending = getPendingMutations();
+            const count = pending.length;
+            
+            if (window.isSyncing) {
+                btn.className = "flex items-center space-x-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-semibold transition-all duration-200 pointer-events-none";
+                btn.innerHTML = `<i data-lucide="refresh-cw" class="h-3.5 w-3.5 animate-spin"></i> <span>Sincronizando...</span>`;
+            } else if (count > 0) {
+                btn.className = "flex items-center space-x-1.5 px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-semibold transition-all duration-200 animate-pulse";
+                btn.innerHTML = `<i data-lucide="cloud-lightning" class="h-3.5 w-3.5"></i> <span>Guardado Local (${count})</span>`;
+            } else if (!navigator.onLine) {
+                btn.className = "flex items-center space-x-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 rounded-lg text-xs font-semibold transition-all duration-200";
+                btn.innerHTML = `<i data-lucide="cloud-off" class="h-3.5 w-3.5"></i> <span>Offline (Caché)</span>`;
+            } else {
+                btn.className = "flex items-center space-x-1.5 px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-semibold transition-all duration-200";
+                btn.innerHTML = `<i data-lucide="cloud-check" class="h-3.5 w-3.5"></i> <span>Nube: Conectado</span>`;
+            }
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        window.isSyncing = false;
+
+        async function syncPendingMutations() {
+            if (window.isSyncing) return;
+            const pending = getPendingMutations();
+            if (pending.length === 0) {
+                window.isSyncing = true;
+                updateSyncUI();
+                try {
+                    const status = await fetch(`${API_URL}/api/db-status`).then(r => r.json());
+                    window.isSyncing = false;
+                    updateSyncUI();
+                    if (status && status.storage) {
+                        triggerToast(`Conexión Segura: Base de Datos en la Nube Activa ✅`, 'success');
+                    } else {
+                        triggerToast(`Sincronizado con la caché local.`, 'success');
+                    }
+                } catch (e) {
+                    window.isSyncing = false;
+                    updateSyncUI();
+                    triggerToast(`Sin internet. Trabajando con caché local del dispositivo. 📶`, 'warning');
+                }
+                return;
+            }
+
+            window.isSyncing = true;
+            updateSyncUI();
+
+            triggerToast(`Sincronizando ${pending.length} cambios con la nube... ☁️`, 'info');
+
+            let successCount = 0;
+            for (const mutation of pending) {
+                try {
+                    const res = await fetch(`${API_URL}${mutation.endpoint}`, {
+                        method: mutation.method,
+                        headers: mutation.headers,
+                        body: mutation.body
+                    });
+                    if (res.ok) {
+                        removePendingMutation(mutation.id);
+                        successCount++;
+                    } else {
+                        console.error(`Sync error on item ${mutation.id}:`, res.statusText);
+                        break; // Stop replaying on first failure to preserve order
+                    }
+                } catch (err) {
+                    console.error(`Sync network failure for item ${mutation.id}:`, err);
+                    break; // Stop replaying on network failure
+                }
+            }
+
+            window.isSyncing = false;
+            updateSyncUI();
+
+            if (successCount > 0) {
+                triggerToast(`¡Sincronización exitosa! ${successCount} cambios subidos a la nube. ☁️✅`, 'success');
+                await loadState();
+            } else {
+                triggerToast(`No se pudo conectar a la nube. Los cambios siguen guardados localmente. 📶`, 'warning');
+            }
+        }
+
+        function triggerSyncCloud() {
+            syncPendingMutations();
+        }
+
         async function fetchAPI(endpoint, options = {}) {
+            const method = (options.method || 'GET').toUpperCase();
+            
+            // 1. If it's a GET request, handle cache-fallback
+            if (method === 'GET') {
+                try {
+                    const res = await fetch(`${API_URL}${endpoint}`, options);
+                    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                    const data = await res.json();
+                    
+                    // Save to cache
+                    localStorage.setItem(`topgreen_cache_${endpoint}`, JSON.stringify(data));
+                    return data;
+                } catch (err) {
+                    console.warn(`Read failed for ${endpoint}. Loading from offline cache...`, err);
+                    const cached = localStorage.getItem(`topgreen_cache_${endpoint}`);
+                    if (cached) {
+                        triggerOfflineToastOnce("Sin conexión. Cargando datos locales de la última sesión. 📶", "warning");
+                        return JSON.parse(cached);
+                    }
+                    return null;
+                }
+            }
+            
+            // 2. If it's a WRITE request (POST, PUT, DELETE, etc.), run WAL flow
+            const mutationId = addPendingMutation(endpoint, options);
+            
             try {
                 const res = await fetch(`${API_URL}${endpoint}`, options);
                 if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-                return await res.json();
+                const data = await res.json();
+                
+                // On network success: remove from WAL
+                removePendingMutation(mutationId);
+                return data;
             } catch (err) {
-                console.error(`API Error on ${endpoint}:`, err);
-                triggerToast(`Error de conexión al servidor en ${endpoint}`, 'error');
-                return null;
+                console.warn(`Write failed for ${endpoint}. Kept in Write-Ahead Log for sync.`, err);
+                triggerOfflineToastOnce("Sin internet. Guardado localmente en tu dispositivo. 💾⚠️", "warning");
+                
+                // Prepare a simulated success response based on the endpoint
+                const bodyObj = options.body ? JSON.parse(options.body) : {};
+                
+                if (endpoint.includes('toggle-bot')) {
+                    return { bot_activo: bodyObj.bot_activo, localOnly: true };
+                }
+                if (endpoint.includes('send-message')) {
+                    return { id: 'msg_' + Date.now(), localOnly: true, ...bodyObj };
+                }
+                if (endpoint.includes('citas/create')) {
+                    return { id: mutationId, localOnly: true, ...bodyObj };
+                }
+                
+                return { exito: true, localOnly: true };
             }
+        }
+
+        function applyOfflineOverlay(stylistsData, inv, srv, nom, lg, appointments) {
+            const pending = getPendingMutations();
+            if (pending.length === 0) return { stylistsData, inv, srv, nom, lg, appointments };
+
+            let localAppointments = appointments ? [...appointments] : [];
+            let localInv = inv ? [...inv] : [];
+            let localSrv = srv ? [...srv] : [];
+            let localNom = nom ? [...nom] : [];
+            let localLg = lg ? [...lg] : [];
+            let localStylists = stylistsData ? [...stylistsData] : [];
+
+            pending.forEach(mutation => {
+                const endpoint = mutation.endpoint;
+                const method = mutation.method.toUpperCase();
+                let body = null;
+                try {
+                    body = mutation.body ? JSON.parse(mutation.body) : {};
+                } catch (e) {
+                    body = {};
+                }
+
+                // A. Appointments create
+                if (endpoint === '/api/citas/create' && method === 'POST') {
+                    const startStr = `${body.date}T${body.hour}:00-06:00`;
+                    const durationMin = body.duration ? (Number(body.duration) * 60) : 180;
+                    const endStr = new Date(new Date(startStr).getTime() + durationMin * 60000).toISOString();
+                    
+                    localAppointments.push({
+                        id: mutation.id,
+                        cliente_id: body.phone ? body.phone.replace(/\D/g, '') : body.customer,
+                        nombre_cliente: body.customer,
+                        estilista_id: null,
+                        estilista_nombre: body.stylist,
+                        servicio_id: null,
+                        servicio_nombre: body.service,
+                        precio_fijo: body.cost,
+                        fecha_hora_inicio: startStr,
+                        fecha_hora_fin: endStr,
+                        estado: body.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente',
+                        link_comprobante: body.formula || null,
+                        localOnly: true
+                    });
+                }
+                // B. Appointment update
+                else if (endpoint.match(/^\/api\/citas\/\w+\/update$/) && method === 'POST') {
+                    const match = endpoint.match(/^\/api\/citas\/(\w+)\/update$/);
+                    const id = match[1];
+                    const startStr = `${body.date}T${body.hour}:00-06:00`;
+                    const durationMin = body.duration ? (Number(body.duration) * 60) : 180;
+                    const endStr = new Date(new Date(startStr).getTime() + durationMin * 60000).toISOString();
+
+                    const app = localAppointments.find(c => String(c.id) === String(id));
+                    if (app) {
+                        app.nombre_cliente = body.customer;
+                        app.cliente_id = body.phone ? body.phone.replace(/\D/g, '') : body.customer;
+                        app.estilista_nombre = body.stylist;
+                        app.servicio_nombre = body.service;
+                        app.precio_fijo = body.cost;
+                        app.fecha_hora_inicio = startStr;
+                        app.fecha_hora_fin = endStr;
+                        app.estado = body.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente';
+                        app.link_comprobante = body.formula || null;
+                    }
+                }
+                // C. Appointment update status
+                else if (endpoint.match(/^\/api\/citas\/\w+\/update-status$/) && method === 'POST') {
+                    const match = endpoint.match(/^\/api\/citas\/(\w+)\/update-status$/);
+                    const id = match[1];
+                    const app = localAppointments.find(c => String(c.id) === String(id));
+                    if (app) {
+                        if (body.estado) app.estado = body.estado;
+                        if (body.link_comprobante) app.link_comprobante = body.link_comprobante;
+                    }
+                }
+                // D. Appointment delete
+                else if (endpoint.match(/^\/api\/citas\/\w+$/) && method === 'DELETE') {
+                    const match = endpoint.match(/^\/api\/citas\/(\w+)$/);
+                    const id = match[1];
+                    localAppointments = localAppointments.filter(c => String(c.id) !== String(id));
+                }
+                // E. Inventory update
+                else if (endpoint === '/api/inventario/update' && method === 'POST') {
+                    const item = localInv.find(i => i.key_name === body.key_name);
+                    if (item) {
+                        item.stock = body.stock;
+                    }
+                }
+                // F. Service update price
+                else if (endpoint === '/api/servicios/update' && method === 'POST') {
+                    const service = localSrv.find(s => String(s.id) === String(body.id));
+                    if (service) {
+                        service.precio_fijo = body.price;
+                    }
+                }
+                // G. Nomina create
+                else if (endpoint === '/api/nomina/create' && method === 'POST') {
+                    localNom.push({
+                        stylist: body.stylist,
+                        service: body.service,
+                        amount: body.amount,
+                        commission: body.commission,
+                        type: body.type,
+                        date: body.date,
+                        cita_id: body.cita_id
+                    });
+                }
+                // H. Log create
+                else if (endpoint === '/api/logs/create' && method === 'POST') {
+                    localLg.push({
+                        time: new Date().toISOString(),
+                        username: body.username,
+                        txt: body.txt
+                    });
+                }
+            });
+
+            return {
+                stylistsData: localStylists,
+                inv: localInv,
+                srv: localSrv,
+                nom: localNom,
+                lg: localLg,
+                appointments: localAppointments
+            };
         }
 
         function toggleGlobalUnit(unit, force = false) {
@@ -716,7 +1030,16 @@
                 fetchAPI('/api/citas')
             ];
 
-            const [stylistsData, inv, srv, nom, lg, appointments] = await Promise.all(promises);
+            let [stylistsData, inv, srv, nom, lg, appointments] = await Promise.all(promises);
+
+            // Apply offline overlays before checking signature and mapping
+            const overlayed = applyOfflineOverlay(stylistsData, inv, srv, nom, lg, appointments);
+            stylistsData = overlayed.stylistsData;
+            inv = overlayed.inv;
+            srv = overlayed.srv;
+            nom = overlayed.nom;
+            lg = overlayed.lg;
+            appointments = overlayed.appointments;
 
             // Verify if state has actually changed to avoid unnecessary DOM re-renders and scroll resets
             const currentSignature = JSON.stringify({
@@ -2520,6 +2843,20 @@
             }
             
             toggleGlobalUnit(state.unitPreference, true);
+
+            // Sync/WAL listeners and initial updates
+            updateSyncUI();
+            window.addEventListener('online', () => {
+                syncPendingMutations();
+            });
+            window.addEventListener('offline', () => {
+                updateSyncUI();
+                triggerOfflineToastOnce("Se ha perdido la conexión a internet. Trabajando en modo offline. 📶", "warning");
+            });
+
+            // Initial sync/check on load
+            syncPendingMutations();
+
             loadState();
         });
     </script>
