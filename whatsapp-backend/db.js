@@ -78,42 +78,66 @@ function saveFallback(data) {
   fs.writeFileSync(fallbackPath, JSON.stringify(data, null, 2));
 }
 
-// Initialize Database connection/fallback
+// Initialize Database connection/fallback with retries and port auto-correction
 async function initDb() {
   if (process.env.DATABASE_URL) {
-    try {
-      pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
-      });
-      // Check query
-      await pool.query('SELECT NOW()');
-      console.log('PostgreSQL database connected successfully. Using SQL storage.');
-      
-      // Auto-initialize schema if services table does not exist
-      const tableCheck = await pool.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-            AND table_name = 'servicios'
-        );
-      `);
-      if (!tableCheck.rows[0].exists) {
-        console.log('Table "servicios" not found. Running schema.sql auto-initialization...');
-        const schemaPath = path.join(__dirname, '..', 'database', 'schema.sql');
-        if (fs.existsSync(schemaPath)) {
-          const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-          await pool.query(schemaSql);
-          console.log('Database tables successfully initialized from schema.sql.');
+    let retries = 5;
+    while (retries > 0) {
+      try {
+        let connStr = process.env.DATABASE_URL;
+        // Auto-correct port 6543 (PgBouncer) to port 5432 (direct) to avoid timeouts and resets
+        if (connStr.includes(':6543/')) {
+          console.log('Auto-correcting PgBouncer port 6543 to direct connection port 5432 for stability.');
+          connStr = connStr.replace(':6543/', ':5432/');
+        }
+
+        pool = new Pool({
+          connectionString: connStr,
+          ssl: connStr.includes('localhost') || connStr.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
+        });
+        
+        // Test query
+        await pool.query('SELECT NOW()');
+        console.log('PostgreSQL database connected successfully. Using SQL storage.');
+        
+        // Auto-initialize schema if services table does not exist
+        const tableCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+              AND table_name = 'servicios'
+          );
+        `);
+        if (!tableCheck.rows[0].exists) {
+          console.log('Table "servicios" not found. Running schema.sql auto-initialization...');
+          const schemaPath = path.join(__dirname, '..', 'database', 'schema.sql');
+          if (fs.existsSync(schemaPath)) {
+            const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+            await pool.query(schemaSql);
+            console.log('Database tables successfully initialized from schema.sql.');
+          } else {
+            console.warn('schema.sql file not found at ' + schemaPath + '. Cannot auto-initialize.');
+          }
+        }
+        
+        useFallback = false;
+        return;
+      } catch (err) {
+        console.warn(`PostgreSQL connection attempt failed (${retries} retries left). Error: ${err.message}`);
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
-          console.warn('schema.sql file not found at ' + schemaPath + '. Cannot auto-initialize.');
+          console.error('All PostgreSQL connection attempts failed.');
+          if (process.env.NODE_ENV === 'production') {
+            console.error('CRITICAL: Running in production with DATABASE_URL, but connection failed. Exiting process to trigger container restart.');
+            process.exit(1);
+          } else {
+            console.warn('Falling back to local JSON file storage.');
+            useFallback = true;
+          }
         }
       }
-      
-      useFallback = false;
-    } catch (err) {
-      console.warn('PostgreSQL connection failed. Falling back to local JSON file storage.\nError:', err.message);
-      useFallback = true;
     }
   } else {
     console.log('No DATABASE_URL found in environment. Using local JSON file storage.');
@@ -816,6 +840,10 @@ const db = {
       }
       return null;
     }
+  },
+
+  isFallback() {
+    return useFallback;
   }
 };
 

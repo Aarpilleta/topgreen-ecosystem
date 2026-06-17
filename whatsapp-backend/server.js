@@ -84,6 +84,15 @@ app.get('/webhook/whatsapp', (req, res) => {
 // CRM FRONTEND API ROUTES
 // =====================================================================
 
+// Get database status
+app.get('/api/db-status', (req, res) => {
+  res.json({
+    storage: db.isFallback() ? 'JSON Fallback (Volatile/Ephemeral)' : 'PostgreSQL (Persistent)',
+    configured: !!process.env.DATABASE_URL,
+    port: process.env.DATABASE_URL ? (process.env.DATABASE_URL.match(/:(\d+)\//)?.[1] || 'default') : null
+  });
+});
+
 // Get all chats
 app.get('/api/chats', async (req, res) => {
   try {
