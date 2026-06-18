@@ -1,6 +1,13 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-zinc-950">
+<html lang="es" class="h-full">
 <head>
+    <script>
+        // Apply theme before page renders to prevent flash of wrong theme
+        (function() {
+            const theme = localStorage.getItem('topgreen_theme') || 'dark';
+            document.documentElement.className = `h-full ${theme}`;
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TOP GREEN | Premium Management Workspace</title>
@@ -30,11 +37,15 @@
         }
     </script>
     <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #09090b; }
-        ::-webkit-scrollbar-thumb { background: #18181b; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #27272a; }
+        /* Custom scrollbar based on theme */
+        html.dark ::-webkit-scrollbar-track { background: #09090b; }
+        html.dark ::-webkit-scrollbar-thumb { background: #18181b; border-radius: 3px; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #27272a; }
         
+        html.light ::-webkit-scrollbar-track { background: #f4f4f5; }
+        html.light ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+        html.light ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
         .bg-stripes-green {
             background-image: repeating-linear-gradient(45deg, #022c22 0px, #022c22 10px, #064e3b 10px, #064e3b 20px);
             background-size: 28px 28px;
@@ -43,19 +54,239 @@
             background-image: repeating-linear-gradient(45deg, #18181b 0px, #18181b 10px, #27272a 10px, #27272a 20px);
             background-size: 28px 28px;
         }
+
+        /* General Body transitions and radial background blurs */
+        html {
+            transition: background 0.3s ease;
+        }
+        html.dark {
+            background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
+                        radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.05) 0%, transparent 45%),
+                        #09090b;
+        }
+        html.light {
+            background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.06) 0%, transparent 45%),
+                        radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.04) 0%, transparent 45%),
+                        #f4f5f6;
+        }
+
+        /* App Wrapper styling (Inspiration Hourglass dashboard grid container) */
+        #app-wrapper {
+            transition: all 0.3s ease;
+        }
+        html.dark #app-wrapper {
+            background-color: rgba(9, 9, 11, 0.4);
+            border-color: rgba(39, 39, 42, 0.6);
+        }
+        html.light #app-wrapper {
+            background-color: rgba(255, 255, 255, 0.65);
+            border-color: rgba(228, 228, 231, 0.8);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Light Mode Specific Overrides */
+        html.light body {
+            color: #0f172a;
+        }
+        html.light header {
+            background-color: transparent !important;
+            border-color: rgba(228, 228, 231, 0.8) !important;
+        }
+        html.light .bg-zinc-950 {
+            background-color: #f8fafc !important;
+        }
+        html.light .bg-zinc-900 {
+            background-color: rgba(241, 245, 249, 0.7) !important;
+            border-color: rgba(226, 232, 240, 0.8) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        }
+        html.light .bg-zinc-900\/90 {
+            background-color: rgba(241, 245, 249, 0.9) !important;
+            border-color: rgba(226, 232, 240, 0.8) !important;
+        }
+        html.light .border-zinc-800 {
+            border-color: rgba(226, 232, 240, 0.8) !important;
+        }
+        html.light .border-zinc-800\/80 {
+            border-color: rgba(226, 232, 240, 0.7) !important;
+        }
+        html.light .border-zinc-850 {
+            border-color: rgba(226, 232, 240, 0.7) !important;
+        }
+        html.light .text-zinc-100 {
+            color: #0f172a !important;
+        }
+        html.light .text-zinc-200 {
+            color: #1e293b !important;
+        }
+        html.light .text-zinc-300 {
+            color: #334155 !important;
+        }
+        html.light .text-zinc-400 {
+            color: #475569 !important;
+        }
+        html.light .text-zinc-500 {
+            color: #64748b !important;
+        }
+        html.light .text-white {
+            color: #0f172a !important;
+        }
+        html.light .bg-zinc-950\/40 {
+            background-color: rgba(248, 250, 252, 0.4) !important;
+        }
+        html.light .bg-zinc-950\/80 {
+            background-color: rgba(248, 250, 252, 0.8) !important;
+        }
+        html.light input, html.light select, html.light textarea {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            border-color: rgba(203, 213, 225, 0.8) !important;
+            color: #0f172a !important;
+        }
+        html.light input:focus, html.light select:focus, html.light textarea:focus {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 1px #10b981 !important;
+        }
+        html.light .bg-stripes-green {
+            background-image: repeating-linear-gradient(45deg, #d1fae5 0px, #d1fae5 10px, #a7f3d0 10px, #a7f3d0 20px) !important;
+        }
+        html.light .bg-stripes-pending {
+            background-image: repeating-linear-gradient(45deg, #f4f4f5 0px, #f4f4f5 10px, #e4e4e7 10px, #e4e4e7 20px) !important;
+        }
+        html.light #live-timer {
+            color: #475569 !important;
+        }
+        html.light .text-emerald-400 {
+            color: #059669 !important;
+        }
+        html.light .text-emerald-500 {
+            color: #10b981 !important;
+        }
+        html.light .text-teal-400 {
+            color: #0d9488 !important;
+        }
+        html.light .text-amber-400 {
+            color: #d97706 !important;
+        }
+        html.light .text-rose-400 {
+            color: #e11d48 !important;
+        }
+        html.light .text-rose-500 {
+            color: #be123c !important;
+        }
+        html.light .bg-emerald-600 {
+            background-color: #10b981 !important;
+            color: #ffffff !important;
+        }
+        html.light .bg-emerald-600:hover {
+            background-color: #059669 !important;
+        }
+        html.light #tab-dashboard.text-zinc-950, html.light #tab-whatsapp.text-zinc-950 {
+            color: #ffffff !important;
+        }
+        html.light .bg-emerald-500\/10 {
+            background-color: rgba(16, 185, 129, 0.1) !important;
+            color: #059669 !important;
+        }
+        html.light .bg-amber-500\/10 {
+            background-color: rgba(245, 158, 11, 0.1) !important;
+            color: #d97706 !important;
+        }
+        html.light .bg-rose-950\/30 {
+            background-color: rgba(225, 29, 72, 0.05) !important;
+            border-color: rgba(225, 29, 72, 0.2) !important;
+            color: #e11d48 !important;
+        }
+        html.light .bg-rose-950\/30:hover {
+            background-color: rgba(225, 29, 72, 0.1) !important;
+        }
+        html.light .bg-emerald-500\/20 {
+            background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        html.light #audit-log-terminal {
+            background-color: rgba(248, 250, 252, 0.9) !important;
+            border-color: rgba(226, 232, 240, 0.8) !important;
+            color: #334155 !important;
+        }
+        html.light .bg-zinc-800 {
+            background-color: #e2e8f0 !important;
+            color: #475569 !important;
+        }
+        html.light .bg-zinc-800:hover {
+            background-color: #cbd5e1 !important;
+            color: #1e293b !important;
+        }
+        html.light .bg-zinc-900\/50 {
+            background-color: rgba(241, 245, 249, 0.5) !important;
+        }
+        html.light button.text-zinc-400:hover {
+            color: #0f172a !important;
+        }
+        html.light #role-Tony, html.light #role-Recepción {
+            background-color: transparent !important;
+            color: #475569 !important;
+        }
+        html.light #role-Tony.bg-emerald-500, html.light #role-Recepción.bg-emerald-500 {
+            background-color: #10b981 !important;
+            color: #ffffff !important;
+        }
+        html.light #tab-dashboard, html.light #tab-whatsapp {
+            background-color: transparent !important;
+            color: #475569 !important;
+            border-color: transparent !important;
+        }
+        html.light #tab-dashboard.bg-emerald-600, html.light #tab-whatsapp.bg-emerald-600 {
+            background-color: #10b981 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+        }
+        html.light .border-dashed {
+            border-color: rgba(203, 213, 225, 0.8) !important;
+            color: #94a3b8 !important;
+        }
+        html.light .border-dashed:hover {
+            border-color: #10b981 !important;
+            background-color: rgba(16, 185, 129, 0.05) !important;
+            color: #059669 !important;
+        }
+        html.light .bg-zinc-950\/20 {
+            background-color: rgba(241, 245, 249, 0.5) !important;
+            border-color: rgba(226, 232, 240, 0.8) !important;
+            color: #64748b !important;
+        }
+        html.light .bg-zinc-800\/90 {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            border-color: rgba(226, 232, 240, 0.9) !important;
+            color: #0f172a !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+        }
+        html.light #monthly-calendar-grid button {
+            background-color: rgba(255, 255, 255, 0.8) !important;
+            border-color: rgba(226, 232, 240, 0.9) !important;
+            color: #475569 !important;
+        }
+        html.light #monthly-calendar-grid button:hover {
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        html.light #monthly-calendar-grid button.bg-emerald-500 {
+            background-color: #10b981 !important;
+            border-color: #059669 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2) !important;
+        }
     </style>
 </head>
-<body class="h-full text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200 antialiased overflow-y-auto">
+<body class="min-h-screen text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200 antialiased overflow-y-auto py-4 lg:py-8">
+    <div class="flex-1 max-w-7xl w-full mx-auto bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/80 rounded-[32px] shadow-2xl p-4 lg:p-6 flex flex-col gap-6" id="app-wrapper">
     
     <!-- Header with Authenticated Roles & Navigation -->
-    <header class="border-b border-zinc-800 bg-zinc-950 px-6 py-4 flex flex-col lg:flex-row items-center justify-between gap-4 sticky top-0 z-50">
+    <header class="border-b border-zinc-800 bg-zinc-950/20 px-6 py-4 flex flex-col lg:flex-row items-center justify-between gap-4 z-50 rounded-2xl">
         <div class="flex items-center space-x-3">
             <div class="h-9 w-9 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
                 <i data-lucide="leaf" class="h-5 w-5 text-zinc-950 stroke-[2.5]"></i>
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-zinc-100">TOP GREEN</h1>
-                <p class="text-[10px] text-emerald-500/70 font-mono tracking-widest uppercase">Secure Enterprise Ledger // Reactive Stack</p>
+                <h1 class="text-xl font-light tracking-[0.25em] uppercase bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-emerald-400 dark:to-zinc-100">TOP GREEN</h1>
             </div>
         </div>
         
@@ -63,11 +294,11 @@
         <div class="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800/80">
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-zinc-950 shadow-md">
                 <i data-lucide="layout-dashboard" class="h-3.5 w-3.5"></i>
-                <span>Agenda y POS</span>
+                <span>POS</span>
             </button>
             <button onclick="switchTab('whatsapp')" id="tab-whatsapp" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-zinc-400 hover:text-white">
                 <i data-lucide="message-square" class="h-3.5 w-3.5"></i>
-                <span>Consola WhatsApp</span>
+                <span>WhatsApp</span>
             </button>
         </div>
         
@@ -105,18 +336,22 @@
             </button>
         </div>
 
-        <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-4 gap-2">
             <div class="flex items-center space-x-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs text-zinc-400">
                 <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span class="font-mono text-[11px]" id="live-timer">08/06/2026 14:42:00</span>
             </div>
+            <!-- Theme Toggle Button -->
+            <button onclick="toggleTheme()" id="theme-toggle-btn" class="flex items-center justify-center h-8 w-8 bg-zinc-900 border border-zinc-800 rounded-full text-zinc-400 hover:text-white transition-all">
+                <i data-lucide="sun" class="h-4 w-4"></i>
+            </button>
         </div>
     </header>
 
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="fixed top-24 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+    <main class="flex-1 space-y-6 p-2 lg:p-4">
         
         <!-- TAB 1: OPERATIVE & POS DASHBOARD -->
         <div id="tab-content-dashboard" class="space-y-6">
@@ -179,7 +414,7 @@
                     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md">
                         <div class="flex items-center justify-between mb-2 border-b border-zinc-800 pb-2">
                             <span class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1">
-                                <i data-lucide="package" class="h-4 w-4 text-emerald-400"></i> Control de Almacén
+                                <i data-lucide="package" class="h-4 w-4 text-emerald-400"></i> Stock
                             </span>
                             <div class="flex items-center gap-2">
                                 <span id="stat-inventory-alerts"></span>
@@ -192,7 +427,7 @@
                     <!-- Service pricing tariff -->
                     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md">
                         <div class="flex items-center justify-between mb-2 border-b border-zinc-800 pb-2">
-                            <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Tarifas de Servicios</span>
+                            <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Catálogo</span>
                         </div>
                         <div class="space-y-2 max-h-[150px] overflow-y-auto" id="services-rates-box"></div>
                     </div>
@@ -202,7 +437,7 @@
                 <div class="lg:col-span-8 bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md flex flex-col">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-zinc-800 pb-3 mb-4 gap-4">
                         <div>
-                            <h2 class="text-sm font-bold text-zinc-100 uppercase tracking-wider" id="agenda-view-title">Agenda Operativa</h2>
+                            <h2 class="text-sm font-bold text-zinc-100 uppercase tracking-wider" id="agenda-view-title">Agenda</h2>
                             <p class="text-xs text-zinc-500 mt-0.5">Gestión y pre-reservaciones en tiempo real para estilistas.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -257,7 +492,7 @@
                     <div>
                         <div class="border-b border-zinc-800 pb-2 mb-3 flex justify-between items-center">
                             <span class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
-                                <i data-lucide="shield" class="h-4 w-4 text-emerald-400"></i> Terminal Caja Blindada POS
+                                <i data-lucide="shield" class="h-4 w-4 text-emerald-400"></i> Caja
                             </span>
                             <div id="checkout-badge-status" class="text-[8px] font-mono bg-zinc-950 text-zinc-500 border border-zinc-850 px-2 py-0.5 rounded">STANDBY</div>
                         </div>
@@ -336,7 +571,7 @@
                 <div class="lg:col-span-6 bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md flex flex-col justify-between">
                     <div class="border-b border-zinc-800 pb-2 mb-2 flex items-center space-x-2">
                         <i data-lucide="edit-3" class="h-4 w-4 text-emerald-400"></i>
-                        <h2 class="text-xs font-bold text-zinc-200 uppercase tracking-wider" id="form-panel-title">Editor Matrix Core</h2>
+                        <h2 class="text-xs font-bold text-zinc-200 uppercase tracking-wider" id="form-panel-title">Citas</h2>
                     </div>
                     
                     <div id="appointment-editor-form" class="space-y-3 opacity-40 pointer-events-none flex-1 flex flex-col justify-between">
@@ -396,7 +631,7 @@
                 <!-- Audit Ledger -->
                 <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
                     <div class="border-b border-zinc-800 pb-2 mb-2 flex justify-between items-center">
-                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Libro Sincronizado (Ledger)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Auditor</span>
                         <span class="text-[8px] bg-zinc-950 border border-zinc-800 text-zinc-500 font-mono px-2 py-0.5 rounded">SYSTEM AUDIT</span>
                     </div>
                     <div class="font-mono text-[11px] text-zinc-400 bg-zinc-950 border border-zinc-850 rounded-lg p-2.5 h-[110px] overflow-y-auto space-y-1" id="audit-log-terminal"></div>
@@ -405,7 +640,7 @@
                 <!-- Payroll Summaries -->
                 <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
                     <div class="border-b border-zinc-800 pb-1.5 mb-2 flex justify-between items-center">
-                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Nómina & Comisiones (30%)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300">Rendimiento</span>
                         <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono font-bold">
                             NÓMINA TOTAL: <span id="payroll-total-commission">$0</span> MXN
                         </span>
@@ -768,6 +1003,37 @@
 
         function triggerSyncCloud() {
             syncPendingMutations();
+        }
+
+        // Theme Toggle Logic
+        function initTheme() {
+            const theme = localStorage.getItem('topgreen_theme') || 'dark';
+            document.documentElement.className = `h-full ${theme}`;
+            updateThemeUI(theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('topgreen_theme', newTheme);
+            document.documentElement.className = `h-full ${newTheme}`;
+            updateThemeUI(newTheme);
+        }
+
+        function updateThemeUI(theme) {
+            const btn = document.getElementById('theme-toggle-btn');
+            if (!btn) return;
+            
+            if (theme === 'light') {
+                btn.innerHTML = `<i data-lucide="moon" class="h-4 w-4"></i>`;
+                btn.className = "flex items-center justify-center h-8 w-8 bg-zinc-200 border border-zinc-300 rounded-full text-zinc-600 hover:text-zinc-950 transition-all";
+            } else {
+                btn.innerHTML = `<i data-lucide="sun" class="h-4 w-4"></i>`;
+                btn.className = "flex items-center justify-center h-8 w-8 bg-zinc-900 border border-zinc-800 rounded-full text-zinc-400 hover:text-white transition-all";
+            }
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
         }
 
         async function fetchAPI(endpoint, options = {}) {
@@ -1840,7 +2106,7 @@
 
         function closeFormEditor() {
             document.getElementById('appointment-editor-form').className = "space-y-3 opacity-40 pointer-events-none flex-1 flex flex-col justify-between";
-            document.getElementById('form-panel-title').innerText = "Editor Matrix Core";
+            document.getElementById('form-panel-title').innerText = "Citas";
         }
 
         // TIME LOCKS / INJECT CUSTOM BLOCKS
@@ -2833,6 +3099,7 @@
         }, 4000);
 
         window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
             switchUser('Tony', true);
             
             const amtDisplay = document.getElementById('checkout-amount-display');
@@ -2860,5 +3127,6 @@
             loadState();
         });
     </script>
+</div>
 </body>
 </html>
