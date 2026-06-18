@@ -80,6 +80,11 @@ app.get('/webhook/whatsapp', (req, res) => {
   return res.send('TOP GREEN Webhook Simulator Endpoint');
 });
 
+// Lightweight ping endpoint for uptime monitors / keep-alive crons
+app.get('/ping', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // =====================================================================
 // CRM FRONTEND API ROUTES
 // =====================================================================
