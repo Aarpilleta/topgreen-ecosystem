@@ -4,6 +4,11 @@ const cors = require('cors');
 const path = require('path');
 const { initDb, db } = require('./db');
 const { handleConversation } = require('./gemini-agent');
+const { makeWASocket, DisconnectReason } = require('@whiskeysockets/baileys');
+const { useDbAuthState } = require('./db-auth');
+const pino = require('pino');
+const QRCode = require('qrcode');
+
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -22,58 +27,12 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // =====================================================================
-// WHATSAPP API & WEBHOOK
+// WHATSAPP API & WEBHOOK (QR-BASED BAILEYS SOCKET)
 // =====================================================================
 
-// Helper to send message via WhatsApp Cloud API
-async function sendWhatsAppMessage(to, text) {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-  if (!token || !phoneNumberId) {
-    console.warn('[WhatsApp API] Advertencia: Faltan credenciales de WhatsApp (WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID).');
-    return null;
-  }
-
-  // Clean Mexican numbers: convert 521XXXXXXXXXX to 52XXXXXXXXXX
-  let cleanTo = to;
-  if (to.startsWith('521') && to.length === 13) {
-    cleanTo = '52' + to.substring(3);
-  }
-
-  const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
-  const body = {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to: cleanTo,
-    type: 'text',
-    text: {
-      body: text
-    }
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('[WhatsApp API] Error al enviar mensaje:', data);
-    } else {
-      console.log('[WhatsApp API] Mensaje enviado con éxito a:', to, data);
-    }
-    return data;
-  } catch (error) {
-    console.error('[WhatsApp API] Error de red al enviar mensaje:', error);
-    return null;
-  }
-}
+let sock = null;
+let qrCodeImage = null;
+let connectionState = 'connecting'; // 'connecting', 'qr', 'connected'
 
 // Handoff Timers memory map
 const handoffTimers = new Map();
@@ -132,6 +91,153 @@ async function checkBotEligibility(chatId, messageText) {
   return { shouldAnswer: false, isAd: false };
 }
 
+// Helper to send message via WhatsApp JID using Baileys socket client
+async function sendWhatsAppMessage(to, text) {
+  if (!sock || connectionState !== 'connected') {
+    console.warn('[WhatsApp Socket] No conectado a WhatsApp. Mensaje no enviado.');
+    return null;
+  }
+
+  // Clean Mexican numbers: convert 521XXXXXXXXXX to 52XXXXXXXXXX
+  let cleanTo = to;
+  if (to.startsWith('521') && to.length === 13) {
+    cleanTo = '52' + to.substring(3);
+  }
+
+  const jid = `${cleanTo}@s.whatsapp.net`;
+
+  try {
+    const response = await sock.sendMessage(jid, { text: text });
+    console.log('[WhatsApp Socket] Mensaje enviado con éxito a:', cleanTo);
+    return response;
+  } catch (error) {
+    console.error('[WhatsApp Socket] Error al enviar mensaje:', error);
+    return null;
+  }
+}
+
+// Main socket initialization and event loop
+async function connectToWhatsApp() {
+  console.log('[WhatsApp Socket] Inicializando socket...');
+  const logger = pino({ level: 'silent' });
+  
+  try {
+    const { state, saveCreds } = await useDbAuthState(db);
+
+    sock = makeWASocket({
+      auth: state,
+      logger,
+      printQRInTerminal: false
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        connectionState = 'qr';
+        try {
+          qrCodeImage = await QRCode.toDataURL(qr);
+          console.log('[WhatsApp Socket] Nuevo código QR generado.');
+        } catch (err) {
+          console.error('[WhatsApp Socket] Error generating QR code:', err);
+        }
+      }
+
+      if (connection === 'close') {
+        const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        console.log('[WhatsApp Socket] Conexión cerrada. Reintentando reconnect:', shouldReconnect, lastDisconnect.error);
+        connectionState = 'connecting';
+        qrCodeImage = null;
+        if (shouldReconnect) {
+          setTimeout(connectToWhatsApp, 3000);
+        }
+      } else if (connection === 'open') {
+        console.log('[WhatsApp Socket] ¡WhatsApp conectado y autenticado exitosamente!');
+        connectionState = 'connected';
+        qrCodeImage = null;
+      }
+    });
+
+    sock.ev.on('messages.upsert', async (m) => {
+      if (m.type !== 'notify') return;
+
+      for (const msg of m.messages) {
+        if (msg.key.fromMe) continue;
+
+        const chatId = msg.key.remoteJid.split('@')[0];
+        const clienteNombre = msg.pushName || 'Cliente WhatsApp';
+
+        let messageText = '';
+        const isMedia = msg.message?.imageMessage || msg.message?.videoMessage;
+
+        if (isMedia) {
+          messageText = '[Archivo multimedia recibido]';
+        } else if (msg.message?.conversation) {
+          messageText = msg.message.conversation;
+        } else if (msg.message?.extendedTextMessage?.text) {
+          messageText = msg.message.extendedTextMessage.text;
+        } else if (msg.message?.buttonsResponseMessage?.selectedButtonId) {
+          messageText = msg.message.buttonsResponseMessage.selectedButtonId;
+        } else if (msg.message?.listResponseMessage?.title) {
+          messageText = msg.message.listResponseMessage.title;
+        }
+
+        if (!messageText) continue;
+
+        console.log(`[WhatsApp Socket] Mensaje de ${clienteNombre} (${chatId}): "${messageText}"`);
+
+        // 1. Get or create chat control
+        const chat = await db.checkOrCreateChat(chatId, clienteNombre);
+        let botActivo = chat.bot_activo;
+
+        // 2. Media Handoff Logic (Flow A Paso 3)
+        if (botActivo && isMedia) {
+          console.log(`[Media Handoff] Cliente ${chatId} envió archivo. Activando Handoff.`);
+          await db.toggleBot(chatId, false);
+          await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
+
+          const transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
+          await db.saveMessage(chatId, 'bot', transitionText);
+          await sendWhatsAppMessage(chatId, transitionText);
+
+          scheduleHandoffTimeout(chatId);
+          continue;
+        }
+
+        // 3. Bot Eligibility Verification
+        if (botActivo) {
+          const eligibility = await checkBotEligibility(chatId, messageText);
+          if (!eligibility.shouldAnswer) {
+            console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
+            await db.toggleBot(chatId, false);
+            botActivo = false;
+          }
+        }
+
+        // 4. Hybrid Routing Logic
+        if (!botActivo) {
+          console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
+          await db.saveMessage(chatId, 'cliente', messageText);
+          continue;
+        }
+
+        // 5. Process with Gemini Elena
+        console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
+        const reply = await handleConversation(chatId, messageText);
+
+        // Send the reply back to the real user JID
+        await sendWhatsAppMessage(chatId, reply);
+      }
+    });
+  } catch (err) {
+    console.error('[WhatsApp Socket] Fallo crítico al conectar:', err);
+    connectionState = 'connecting';
+    setTimeout(connectToWhatsApp, 5000);
+  }
+}
+
 // Background job for Anti-Ghosting (checks every 1 hour)
 setInterval(async () => {
   try {
@@ -162,99 +268,8 @@ setInterval(async () => {
   }
 }, 60 * 60 * 1000);
 
+// Simulator support endpoint (Dashboard client test tab)
 app.post('/webhook/whatsapp', async (req, res) => {
-  // 1. Check if it is a real webhook payload from Meta
-  if (req.body.object === 'whatsapp_business_account') {
-    try {
-      const entry = req.body.entry?.[0];
-      const change = entry?.changes?.[0];
-      const value = change?.value;
-      const messageObj = value?.messages?.[0];
-
-      // Meta sends status updates (sent, delivered, read) without messages. Ignore those.
-      if (!messageObj) {
-        return res.sendStatus(200);
-      }
-
-      const chatId = messageObj.from;
-      let messageText = '';
-      const isMedia = messageObj.type === 'image' || messageObj.type === 'video';
-
-      if (isMedia) {
-        messageText = '[Archivo multimedia recibido]';
-      } else if (messageObj.type === 'text') {
-        messageText = messageObj.text?.body;
-      } else if (messageObj.type === 'interactive') {
-        const interactive = messageObj.interactive;
-        if (interactive.type === 'button_reply') {
-          messageText = interactive.button_reply?.title;
-        } else if (interactive.type === 'list_reply') {
-          messageText = interactive.list_reply?.title;
-        }
-      }
-
-      if (!messageText) {
-        console.log(`[WhatsApp Webhook] Mensaje recibido sin texto interpretable (tipo: ${messageObj.type}).`);
-        return res.sendStatus(200);
-      }
-
-      const contact = value?.contacts?.[0];
-      const clienteNombre = contact?.profile?.name || 'Cliente WhatsApp';
-
-      console.log(`[WhatsApp Webhook] Mensaje real de ${clienteNombre} (${chatId}): "${messageText}"`);
-
-      // 1. Get or create chat control
-      const chat = await db.checkOrCreateChat(chatId, clienteNombre);
-      let botActivo = chat.bot_activo;
-
-      // 2. Media Handoff Logic (Flow A Paso 3)
-      if (botActivo && isMedia) {
-        console.log(`[Media Handoff] Cliente ${chatId} envió archivo. Activando Handoff.`);
-        await db.toggleBot(chatId, false);
-        await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
-
-        const transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
-        await db.saveMessage(chatId, 'bot', transitionText);
-        await sendWhatsAppMessage(chatId, transitionText);
-
-        // Schedule the 5-minute timeout for agent response
-        scheduleHandoffTimeout(chatId);
-
-        return res.sendStatus(200);
-      }
-
-      // 3. Bot Eligibility Verification
-      if (botActivo) {
-        const eligibility = await checkBotEligibility(chatId, messageText);
-        if (!eligibility.shouldAnswer) {
-          console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
-          await db.toggleBot(chatId, false);
-          botActivo = false;
-        }
-      }
-
-      // 4. Hybrid Routing Logic
-      if (!botActivo) {
-        console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
-        await db.saveMessage(chatId, 'cliente', messageText);
-        return res.sendStatus(200);
-      }
-
-      // 5. Process with Gemini Elena
-      console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
-      const reply = await handleConversation(chatId, messageText);
-
-      // Send the reply back to the real user via Meta API
-      await sendWhatsAppMessage(chatId, reply);
-
-      return res.sendStatus(200);
-    } catch (error) {
-      console.error('Error al procesar webhook real de WhatsApp:', error);
-      return res.sendStatus(500);
-    }
-  }
-
-  // 2. Fallback to simulator format
   const { chatId, message, clienteNombre } = req.body;
 
   if (!chatId || !message) {
@@ -315,19 +330,46 @@ app.post('/webhook/whatsapp', async (req, res) => {
   }
 });
 
-app.get('/webhook/whatsapp', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
+// QR and WhatsApp state API routes
+app.get('/api/whatsapp/status', (req, res) => {
+  res.json({
+    status: connectionState,
+    qr: !!qrCodeImage
+  });
+});
 
-  if (mode && token) {
-    if (mode === 'subscribe' && token === (process.env.WHATSAPP_VERIFY_TOKEN || 'topgreen_token')) {
-      console.log('Webhook verificado con éxito.');
-      return res.status(200).send(challenge);
-    }
-    return res.status(403).send('Forbidden');
+app.get('/api/whatsapp/qr', (req, res) => {
+  if (connectionState === 'qr' && qrCodeImage) {
+    res.json({ qr: qrCodeImage });
+  } else {
+    res.json({ qr: null, status: connectionState });
   }
-  return res.send('TOP GREEN Webhook Simulator Endpoint');
+});
+
+app.post('/api/whatsapp/disconnect', async (req, res) => {
+  try {
+    if (sock) {
+      await sock.logout();
+    }
+    // Delete session auth data
+    if (db.isFallback()) {
+      const data = loadFallback();
+      data.whatsapp_auth = {};
+      saveFallback(data);
+    } else {
+      await pool.query('TRUNCATE TABLE whatsapp_auth');
+    }
+    connectionState = 'connecting';
+    qrCodeImage = null;
+    res.json({ exito: true });
+  } catch (err) {
+    console.error('Error disconnecting:', err);
+    res.status(500).json({ error: 'Error al desconectar WhatsApp.' });
+  }
+});
+
+app.get('/webhook/whatsapp', (req, res) => {
+  return res.send('TOP GREEN Webhook QR Simulator Endpoint');
 });
 
 // Lightweight ping endpoint for uptime monitors / keep-alive crons
@@ -416,7 +458,7 @@ app.post('/api/chats/:chatId/send-message', async (req, res) => {
     const savedMsg = await db.saveMessage(chatId, 'humano', finalMessage);
 
     // If it's a numeric chatId (real WhatsApp phone number format), send via WhatsApp API
-    if (/^\d+$/.test(chatId) && process.env.WHATSAPP_ACCESS_TOKEN) {
+    if (/^\d+$/.test(chatId)) {
       await sendWhatsAppMessage(chatId, finalMessage);
     }
 
@@ -601,5 +643,6 @@ app.post('/api/servicios/update', async (req, res) => {
 initDb().then(() => {
   app.listen(port, () => {
     console.log(`TOP GREEN Backend listening at http://localhost:${port}`);
+    connectToWhatsApp();
   });
 });

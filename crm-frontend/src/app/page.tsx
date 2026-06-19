@@ -58,6 +58,10 @@ export default function Dashboard() {
   const [estilistas, setEstilistas] = useState<Estilista[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [waStatus, setWaStatus] = useState<'connecting' | 'qr' | 'connected'>('connecting');
+  const [waQr, setWaQr] = useState<string | null>(null);
+  const [showWaModal, setShowWaModal] = useState(false);
+
   // New mock client state
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [newClientPhone, setNewClientPhone] = useState('');
@@ -70,10 +74,11 @@ export default function Dashboard() {
   // Fetch all necessary data
   const fetchData = async () => {
     try {
-      const [chatsRes, citasRes, estilistasRes] = await Promise.all([
+      const [chatsRes, citasRes, estilistasRes, statusRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/chats`),
         fetch(`${BACKEND_URL}/api/citas`),
-        fetch(`${BACKEND_URL}/api/estilistas`)
+        fetch(`${BACKEND_URL}/api/estilistas`),
+        fetch(`${BACKEND_URL}/api/whatsapp/status`)
       ]);
 
       if (chatsRes.ok) {
@@ -88,10 +93,37 @@ export default function Dashboard() {
 
       if (citasRes.ok) setCitas(await citasRes.json());
       if (estilistasRes.ok) setEstilistas(await estilistasRes.json());
+      
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        setWaStatus(statusData.status);
+        if (statusData.status === 'qr') {
+          const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
+          if (qrRes.ok) {
+            const qrData = await qrRes.json();
+            setWaQr(qrData.qr);
+          }
+        } else {
+          setWaQr(null);
+        }
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDisconnectWa = async () => {
+    if (!confirm('¿Estás seguro de que deseas desconectar la vinculación de WhatsApp?')) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/whatsapp/disconnect`, { method: 'POST' });
+      if (res.ok) {
+        setWaStatus('connecting');
+        setWaQr(null);
+      }
+    } catch (err) {
+      console.error('Error disconnecting WhatsApp:', err);
     }
   };
 
@@ -242,13 +274,34 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <button
-          onClick={() => setShowNewClientModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-emerald-700/20 flex items-center space-x-1.5"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Nuevo Chat Simulador</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          {waStatus === 'connected' ? (
+            <button
+              onClick={handleDisconnectWa}
+              className="bg-emerald-950/40 hover:bg-red-950/20 text-emerald-400 hover:text-red-400 border border-emerald-500/20 hover:border-red-500/30 font-bold text-xs px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer"
+              title="Desconectar WhatsApp"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>WhatsApp Conectado</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowWaModal(true)}
+              className="bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 border border-amber-500/20 font-bold text-xs px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span>Vincular WhatsApp</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowNewClientModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-emerald-700/20 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Nuevo Chat Simulador</span>
+          </button>
+        </div>
       </header>
 
       {/* Stats Board */}
@@ -473,6 +526,73 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp QR Modal */}
+      {showWaModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-sm font-bold text-zinc-200 flex items-center space-x-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>Vincular WhatsApp</span>
+              </h3>
+              <button
+                onClick={() => setShowWaModal(false)}
+                className="text-zinc-500 hover:text-zinc-300 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center justify-center space-y-4 py-2">
+              {waStatus === 'connecting' && (
+                <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                  <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                  <p className="text-xs text-zinc-400 font-medium">Generando código de vinculación...</p>
+                </div>
+              )}
+
+              {waStatus === 'qr' && waQr && (
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="bg-white p-3 rounded-2xl border border-zinc-800 shadow-inner">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={waQr} alt="WhatsApp QR Code" className="w-48 h-48" />
+                  </div>
+                  <p className="text-xs text-zinc-300 text-center font-medium">
+                    Escanea este código QR desde la app móvil de WhatsApp (Dispositivos vinculados) para iniciar sesión.
+                  </p>
+                </div>
+              )}
+
+              {waStatus === 'connected' && (
+                <div className="flex flex-col items-center py-6 space-y-3 text-center">
+                  <div className="w-12 h-12 bg-emerald-950/60 border border-emerald-500/30 rounded-full flex items-center justify-center">
+                    <span className="w-4 h-4 rounded-full bg-emerald-400 animate-pulse"></span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-400">¡Conexión Exitosa!</h4>
+                    <p className="text-xs text-zinc-400 mt-1">El chatbot está listo para procesar mensajes en vivo.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleDisconnectWa();
+                      setShowWaModal(false);
+                    }}
+                    className="mt-2 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-500/20 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Desconectar Cuenta
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="text-[10px] text-zinc-500 leading-relaxed border-t border-zinc-800 pt-3">
+              <p>Nota: Este método mantiene activa tu aplicación móvil y tu historial de chats actual intacto.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

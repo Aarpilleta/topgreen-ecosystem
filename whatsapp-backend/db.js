@@ -100,6 +100,14 @@ async function initDb() {
         await pool.query('SELECT NOW()');
         console.log('PostgreSQL database connected successfully. Using SQL storage.');
 
+        // Initialize whatsapp_auth table if not exists
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS whatsapp_auth (
+            key VARCHAR(255) PRIMARY KEY,
+            value TEXT
+          )
+        `);
+
         // Update stylist colors to match new preferences
         try {
           await pool.query("UPDATE estilistas SET color = '#fbbf24' WHERE nombre = 'Pili'");
@@ -855,6 +863,45 @@ const db = {
         return svc;
       }
       return null;
+    }
+  },
+
+  async getAuthKey(key) {
+    if (!useFallback) {
+      const res = await pool.query('SELECT value FROM whatsapp_auth WHERE key = $1', [key]);
+      return res.rows.length > 0 ? JSON.parse(res.rows[0].value) : null;
+    } else {
+      const data = loadFallback();
+      if (!data.whatsapp_auth) data.whatsapp_auth = {};
+      return data.whatsapp_auth[key] ? JSON.parse(data.whatsapp_auth[key]) : null;
+    }
+  },
+
+  async setAuthKey(key, value) {
+    const valStr = JSON.stringify(value);
+    if (!useFallback) {
+      await pool.query(
+        `INSERT INTO whatsapp_auth (key, value) VALUES ($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        [key, valStr]
+      );
+    } else {
+      const data = loadFallback();
+      if (!data.whatsapp_auth) data.whatsapp_auth = {};
+      data.whatsapp_auth[key] = valStr;
+      saveFallback(data);
+    }
+  },
+
+  async deleteAuthKey(key) {
+    if (!useFallback) {
+      await pool.query('DELETE FROM whatsapp_auth WHERE key = $1', [key]);
+    } else {
+      const data = loadFallback();
+      if (data.whatsapp_auth) {
+        delete data.whatsapp_auth[key];
+        saveFallback(data);
+      }
     }
   },
 
