@@ -35,11 +35,17 @@ async function sendWhatsAppMessage(to, text) {
     return null;
   }
 
+  // Clean Mexican numbers: convert 521XXXXXXXXXX to 52XXXXXXXXXX
+  let cleanTo = to;
+  if (to.startsWith('521') && to.length === 13) {
+    cleanTo = '52' + to.substring(3);
+  }
+
   const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
   const body = {
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
-    to: to,
+    to: cleanTo,
     type: 'text',
     text: {
       body: text
