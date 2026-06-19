@@ -296,9 +296,9 @@ app.post('/api/logs/create', async (req, res) => {
 
 // Create custom appointment
 app.post('/api/citas/create', async (req, res) => {
-  const { customer, service, duration, cost, status, formula, stylist, date, hour } = req.body;
+  const { customer, service, duration, cost, status, formula, stylist, date, hour, phone } = req.body;
   try {
-    const app = await db.createAppointment({ customer, service, duration: Number(duration), cost: Number(cost), status, formula, stylist, date, hour });
+    const app = await db.createAppointment({ customer, service, duration: Number(duration), cost: Number(cost), status, formula, stylist, date, hour, phone });
     res.json(app);
   } catch (error) {
     console.error('Error al crear cita:', error);

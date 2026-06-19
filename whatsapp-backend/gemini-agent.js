@@ -82,11 +82,22 @@ async function dbCheckAvailability(servicioId, fechaStr) {
     }));
 
     // Working hours: 11:00 to 20:00 (11am to 8pm) in salon local timezone
-    const workStartHour = 11;
+    // Friday & Saturday: 9:30 to 20:00
+    let workStartHour = 11;
+    let workStartMins = 0;
     const workEndHour = 20;
+
+    // Get day of week in CST (UTC-6)
+    const targetDate = new Date(`${fechaStr}T12:00:00-06:00`);
+    const dayOfWeek = targetDate.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+    if (dayOfWeek === 5 || dayOfWeek === 6) {
+      workStartHour = 9;
+      workStartMins = 30;
+    }
 
     for (let hour = workStartHour; hour < workEndHour; hour++) {
       for (const mins of [0, 30]) {
+        if (hour === 9 && mins === 0) continue; // Skip 9:00 if start is 9:30
         if (hour + mins / 60 + duracion / 60 > workEndHour) continue;
 
         const hh = String(hour).padStart(2, '0');

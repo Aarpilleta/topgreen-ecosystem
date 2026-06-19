@@ -99,6 +99,22 @@ async function initDb() {
         // Test query
         await pool.query('SELECT NOW()');
         console.log('PostgreSQL database connected successfully. Using SQL storage.');
+
+        // Update stylist colors to match new preferences
+        try {
+          await pool.query("UPDATE estilistas SET color = '#fbbf24' WHERE nombre = 'Pili'");
+          await pool.query("UPDATE estilistas SET color = '#38bdf8' WHERE nombre = 'Joel'");
+          await pool.query("UPDATE estilistas SET color = '#34d399' WHERE nombre = 'Rose'");
+          await pool.query("UPDATE estilistas SET color = '#ef4444' WHERE nombre = 'Majo'");
+          await pool.query("UPDATE estilistas SET color = '#f472b6' WHERE nombre = 'Cande'");
+          await pool.query("UPDATE estilistas SET color = '#1d4ed8' WHERE nombre = 'Judith'");
+          await pool.query("UPDATE estilistas SET color = '#c084fc' WHERE nombre = 'Laura'");
+          await pool.query("UPDATE estilistas SET color = '#854d0e' WHERE nombre = 'Fran'");
+          await pool.query("UPDATE estilistas SET color = '#fb923c' WHERE nombre = 'Tony'");
+          console.log('Stylists colors updated successfully in PostgreSQL.');
+        } catch (colorErr) {
+          console.warn('Could not update stylist colors in database:', colorErr.message);
+        }
         
         // Auto-initialize schema if services table does not exist
         const tableCheck = await pool.query(`

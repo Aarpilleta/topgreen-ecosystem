@@ -468,9 +468,13 @@
                                 <option value="17:00">17:00</option>
                             </select>
                             <select id="lock-duration" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none font-mono">
+                                <option value="0.5">0.5 hr</option>
                                 <option value="1">1 hr</option>
+                                <option value="1.5">1.5 hrs</option>
                                 <option value="2">2 hrs</option>
+                                <option value="2.5">2.5 hrs</option>
                                 <option value="3">3 hrs</option>
+                                <option value="3.5">3.5 hrs</option>
                                 <option value="4">4 hrs</option>
                                 <option value="5" selected>5 hrs</option>
                                 <option value="6">6 hrs</option>
@@ -587,9 +591,10 @@
                         <input type="hidden" id="edit-appointment-id">
                         
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                            <div class="sm:col-span-1">
+                            <div class="sm:col-span-1 relative">
                                 <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Cliente</label>
-                                <input type="text" id="edit-customer-name" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="edit-customer-name" autocomplete="off" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                <div id="customer-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-850 rounded-lg max-h-40 overflow-y-auto z-50 shadow-2xl"></div>
                             </div>
                             <div class="sm:col-span-1">
                                 <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Contacto (Tel)</label>
@@ -611,7 +616,7 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Duración Bloque (Horas)</label>
-                                <input type="number" id="edit-duration-hours" min="1" max="6" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white font-mono focus:outline-none">
+                                <input type="number" id="edit-duration-hours" min="0.5" max="12" step="0.5" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white font-mono focus:outline-none">
                             </div>
                             <div>
                                 <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Precio ($ MXN)</label>
@@ -844,7 +849,7 @@
             customCheckoutPrice: null
         };
 
-        const hoursArray = ["11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+        let hoursArray = ["11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
         let stylistsArray = [];
         const retailProductMap = {
             'shampoo': 'shampoo_retail',
@@ -1294,6 +1299,44 @@
         }
 
         async function loadState() {
+            // Update hoursArray based on selected date (Friday & Saturday: 9:30 to 20:00, other days: 11:00 to 20:00)
+            const [y, m, d] = state.selectedDate.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+            
+            const isFridayOrSaturday = (dayOfWeek === 5 || dayOfWeek === 6);
+            const startHour = isFridayOrSaturday ? 9.5 : 11.0;
+            const endHour = 20.0;
+            
+            hoursArray = [];
+            for (let h = startHour; h < endHour; h += 0.5) {
+                const hh = Math.floor(h);
+                const mm = (h % 1 === 0) ? '00' : '30';
+                hoursArray.push(`${String(hh).padStart(2, '0')}:${mm}`);
+            }
+
+            // Populate lock start hour options dynamically
+            const lockStartSelect = document.getElementById('lock-start-hour');
+            if (lockStartSelect) {
+                const prevVal = lockStartSelect.value;
+                lockStartSelect.innerHTML = '';
+                hoursArray.forEach(hour => {
+                    const opt = document.createElement('option');
+                    opt.value = hour;
+                    opt.innerText = hour;
+                    lockStartSelect.appendChild(opt);
+                });
+                if (hoursArray.includes(prevVal)) {
+                    lockStartSelect.value = prevVal;
+                } else if (hoursArray.length > 0) {
+                    if (hoursArray.includes('12:00')) {
+                        lockStartSelect.value = '12:00';
+                    } else {
+                        lockStartSelect.value = hoursArray[0];
+                    }
+                }
+            }
+
             // Build the array of promises to run in parallel
             const promises = [
                 (!state.stylists || state.stylists.length === 0) ? fetchAPI('/api/estilistas') : Promise.resolve(null),
@@ -1305,6 +1348,17 @@
             ];
 
             let [stylistsData, inv, srv, nom, lg, appointments] = await Promise.all(promises);
+
+            // Also fetch chats to populate contacts for autocomplete
+            let chatsData = null;
+            try {
+                chatsData = await fetchAPI('/api/chats');
+                if (chatsData) {
+                    state.chats = chatsData;
+                }
+            } catch (err) {
+                console.error("Error loading chats/contacts:", err);
+            }
 
             // Apply offline overlays before checking signature and mapping
             const overlayed = applyOfflineOverlay(stylistsData, inv, srv, nom, lg, appointments);
@@ -1366,7 +1420,7 @@
                         id: s.id,
                         name: s.nombre,
                         price: Number(s.precio_fijo),
-                        defaultDuration: Math.round(s.duracion_minutos / 60),
+                        defaultDuration: s.duracion_minutos / 60,
                         stockKey,
                         stockQty
                     };
@@ -1417,10 +1471,13 @@
                         if (datePart === state.selectedDate) {
                             const stylist = app.estilista_nombre;
                             if (state.database[state.selectedDate][stylist]) {
-                                const roundedHour = `${timePart.substring(0, 2)}:00`;
+                                const minutesVal = parseInt(timePart.substring(3, 5)) || 0;
+                                const roundedMins = minutesVal >= 30 ? '30' : '00';
+                                const roundedHour = `${timePart.substring(0, 2)}:${roundedMins}`;
                                 const startIdx = hoursArray.indexOf(roundedHour);
                                 if (startIdx !== -1) {
-                                    const durationHrs = Math.max(1, Math.round((end - start) / (60 * 60 * 1000)));
+                                    const durationHrs = (end - start) / (60 * 60 * 1000);
+                                    const durationSlots = Math.max(1, Math.round((end - start) / (30 * 60 * 1000)));
 
                                     state.database[state.selectedDate][stylist][roundedHour] = {
                                         id: app.id,
@@ -1434,7 +1491,7 @@
                                         type: app.estado === 'confirmada' ? 'timelock' : 'standard'
                                     };
 
-                                    for (let i = 1; i < durationHrs; i++) {
+                                    for (let i = 1; i < durationSlots; i++) {
                                         if (startIdx + i < hoursArray.length) {
                                             state.database[state.selectedDate][stylist][hoursArray[startIdx + i]] = {
                                                 type: 'parent',
@@ -1606,8 +1663,9 @@
 
             // Verify slots fit at target
             const startIdx = hoursArray.indexOf(targetHour);
+            const durationSlots = Math.round(sourceApp.duration * 2);
             let fits = true;
-            for (let i = 0; i < sourceApp.duration; i++) {
+            for (let i = 0; i < durationSlots; i++) {
                 if (startIdx + i >= hoursArray.length) { fits = false; break; }
                 const testHr = hoursArray[startIdx + i];
                 const block = sched[targetStylist][testHr];
@@ -2015,7 +2073,7 @@
             const customer = document.getElementById('edit-customer-name').value.trim();
             const phone = document.getElementById('edit-customer-phone').value.trim();
             const serviceId = document.getElementById('edit-service-select').value;
-            const duration = parseInt(document.getElementById('edit-duration-hours').value) || 1;
+            const duration = parseFloat(document.getElementById('edit-duration-hours').value) || 1;
             const cost = parseInt(document.getElementById('edit-cost-display').value) || 0;
             const status = document.getElementById('edit-payment-status').value;
             const formula = document.getElementById('edit-client-formula').value;
@@ -2043,8 +2101,9 @@
             // Verify slots fit
             const sched = getActiveSchedule();
             const startIdx = hoursArray.indexOf(hour);
+            const durationSlots = Math.round(duration * 2);
             let fits = true;
-            for (let i = 0; i < duration; i++) {
+            for (let i = 0; i < durationSlots; i++) {
                 if (startIdx + i >= hoursArray.length) { fits = false; break; }
                 const blockHr = hoursArray[startIdx + i];
                 const block = sched[stylist][blockHr];
@@ -2129,7 +2188,7 @@
 
         async function triggerAutoAppointmentLock() {
             const nameInput = document.getElementById('lock-client-name').value.trim() || "CANDADO DE TIEMPO";
-            const duration = parseInt(document.getElementById('lock-duration').value) || 1;
+            const duration = parseFloat(document.getElementById('lock-duration').value) || 1;
             const stylist = document.getElementById('lock-stylist').value;
             const startHour = document.getElementById('lock-start-hour').value;
             const cost = parseInt(document.getElementById('lock-cost').value) || 0;
@@ -2151,15 +2210,16 @@
 
             const sched = getActiveSchedule();
             const startIdx = hoursArray.indexOf(startHour);
+            const durationSlots = Math.round(duration * 2);
             
-            if (startIdx === -1 || startIdx + duration > hoursArray.length) {
+            if (startIdx === -1 || startIdx + durationSlots > hoursArray.length) {
                 triggerToast("La duración excede el horario operativo diario de este estilista.", "error");
                 return;
             }
 
             // Check if slots are free
             let free = true;
-            for (let i = 0; i < duration; i++) {
+            for (let i = 0; i < durationSlots; i++) {
                 const hr = hoursArray[startIdx + i];
                 if (sched[stylist][hr]) { free = false; break; }
             }
@@ -3106,9 +3166,59 @@
             }
         }, 4000);
 
+        function initCustomerAutocomplete() {
+            const nameInput = document.getElementById('edit-customer-name');
+            const phoneInput = document.getElementById('edit-customer-phone');
+            const suggestionsDiv = document.getElementById('customer-suggestions');
+            
+            if (!nameInput || !suggestionsDiv) return;
+            
+            nameInput.addEventListener('input', () => {
+                const query = nameInput.value.trim().toLowerCase();
+                if (!query) {
+                    suggestionsDiv.classList.add('hidden');
+                    return;
+                }
+                
+                // Filter state.chats for matching names
+                const matches = (state.chats || []).filter(c => 
+                    c.nombre_cliente && c.nombre_cliente.toLowerCase().includes(query)
+                );
+                
+                if (matches.length > 0) {
+                    suggestionsDiv.innerHTML = '';
+                    matches.slice(0, 10).forEach(contact => {
+                        const item = document.createElement('div');
+                        item.className = 'px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0';
+                        item.innerHTML = `
+                            <div class="font-bold text-zinc-100">${contact.nombre_cliente}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono">${contact.chat_id_whatsapp}</div>
+                        `;
+                        item.addEventListener('click', () => {
+                            nameInput.value = contact.nombre_cliente;
+                            phoneInput.value = contact.chat_id_whatsapp;
+                            suggestionsDiv.classList.add('hidden');
+                        });
+                        suggestionsDiv.appendChild(item);
+                    });
+                    suggestionsDiv.classList.remove('hidden');
+                } else {
+                    suggestionsDiv.classList.add('hidden');
+                }
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (e.target !== nameInput && e.target !== suggestionsDiv && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.classList.add('hidden');
+                }
+            });
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             initTheme();
             switchUser('Tony', true);
+            initCustomerAutocomplete();
             
             const amtDisplay = document.getElementById('checkout-amount-display');
             if (amtDisplay) {

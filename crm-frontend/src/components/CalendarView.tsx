@@ -63,10 +63,10 @@ export default function CalendarView({ citas, estilistas, onUpdateCita, onRefres
     return apptDate === selectedDateStr && appt.estado !== 'cancelada';
   });
 
-  // Working Hours (09:00 to 19:00)
+  // Working Hours (09:00 to 20:00)
   const hourHeight = 64; // px per hour
   const startHour = 9;
-  const endHour = 19;
+  const endHour = 20;
   const totalHours = endHour - startHour;
   const timeSlots = Array.from({ length: totalHours }).map((_, i) => startHour + i);
 

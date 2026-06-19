@@ -245,7 +245,7 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
   'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
   'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
   'Ampolleta Hidratación', 'Ampolleta Reparación'
-], '#10b981', true),
+], '#fbbf24', true),
 
 ('Joel', ARRAY[
   'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
@@ -253,7 +253,7 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
   'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido',
   'Mascarilla capilar', 'Botox capilar', 'Nanoplastia', 'Mucota & detox',
   'Ampolleta Hidratación', 'Ampolleta Reparación'
-], '#3b82f6', true),
+], '#38bdf8', true),
 
 ('Rose', ARRAY[
   'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
@@ -265,25 +265,25 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
   'Espalda completa (IPL)', 'Media espalda (IPL)', 'Brazos (IPL) - $3200', 'Abdomen (IPL)', 'Piernas completas (IPL)', 'Media pierna (IPL)', 'Brazos (IPL) - $3800', 'Bigote (IPL)', 'Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 'Paquete IPL: Axilas, piernas, bikini y area gluteal', 'Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)',
   'Depilación Cera Abdomen', 'Depilación Cera Axila', 'Depilación Cera Bozo o mentón', 'Depilación Cera Brazo', 'Depilación Cera Cejas', 'Diseño de cejas (Cera)', 'Depilación Cera Espalda completa', 'Depilación Cera Bikini', 'Depilación Cera Ingles', 'Depilación Cera Linea central abdomen', 'Depilación Cera Media espalda', 'Depilación Cera Pierna completa', 'Depilación Cera Media pierna', 'Depilación Cera Patillas', 'Cara completa (Cera)',
   'Maquillaje', 'Planchado de cejas', 'Planchado de ceja c/n henna', 'Henna c/n depilación', 'Henna ceja'
-], '#a855f7', true),
+], '#34d399', true),
 
 ('Majo', ARRAY[
   'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
   'Pestañas volumen', 'Efecto rimel', 'Extensiones clásicas', 'Extensiones híbridas', 'Retoque clásicas', 'Retoque efecto rímel', 'Retoque híbrida', 'Retoque volumen', 'Retiro pestañas', 'Pestañas de tira', 'Lifting de pestañas', 'Lifting de pestañas/tinta',
   'Limpieza profunda', 'Humectación'
-], '#ec4899', true),
+], '#ef4444', true),
 
 ('Cande', ARRAY[
   'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico'
-], '#f43f5e', true),
+], '#f472b6', true),
 
 ('Judith', ARRAY[
   'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico'
-], '#f59e0b', true),
+], '#1d4ed8', true),
 
 ('Laura', ARRAY[
   'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico'
-], '#14b8a6', true),
+], '#c084fc', true),
 
 ('Lizbeth', ARRAY[
   'Cejas pelo a pelo', 'Delineado de cejas', 'Delineado de ojos', 'Delineado dentro de ojos', 'Relleno de labios'
@@ -291,7 +291,7 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
 
 ('Fran', ARRAY[
   'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero'
-], '#6366f1', true)
+], '#854d0e', true)
 
 -- Insert Inventario
 INSERT INTO inventario (key_name, nombre, stock, min, cost_per_unit, price, item_type) VALUES
