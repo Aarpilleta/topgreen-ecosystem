@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const { initDb, db } = require('./db');
 const { handleConversation } = require('./gemini-agent');
-const { makeWASocket, DisconnectReason } = require('@whiskeysockets/baileys');
+const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { useDbAuthState } = require('./db-auth');
 const pino = require('pino');
 const QRCode = require('qrcode');
@@ -124,7 +124,17 @@ async function connectToWhatsApp() {
   try {
     const { state, saveCreds } = await useDbAuthState(db);
 
+    let version;
+    try {
+      const fetched = await fetchLatestBaileysVersion();
+      version = fetched.version;
+      console.log(`[WhatsApp Socket] Conectando con versión de WA Web v${version.join('.')}`);
+    } catch (err) {
+      console.warn('[WhatsApp Socket] No se pudo obtener la última versión de WA Web de Baileys, usando default:', err.message);
+    }
+
     sock = makeWASocket({
+      version,
       auth: state,
       logger,
       printQRInTerminal: false
