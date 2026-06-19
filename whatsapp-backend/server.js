@@ -37,6 +37,24 @@ let connectionState = 'connecting'; // 'connecting', 'qr', 'connected'
 // Handoff Timers memory map
 const handoffTimers = new Map();
 
+function isOutsideBusinessHours() {
+  const options = { timeZone: 'America/Mexico_City', hour12: false };
+  const dateInMx = new Date(new Date().toLocaleString('en-US', options));
+  const day = dateInMx.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const hour = dateInMx.getHours();
+  const minutes = dateInMx.getMinutes();
+  const timeDecimal = hour + (minutes / 60);
+
+  let openTime = 11.0;
+  const closeTime = 20.0;
+
+  if (day === 5 || day === 6) { // Friday or Saturday
+    openTime = 9.5; // 9:30 AM
+  }
+
+  return (timeDecimal < openTime || timeDecimal >= closeTime);
+}
+
 function scheduleHandoffTimeout(chatId) {
   if (handoffTimers.has(chatId)) {
     clearTimeout(handoffTimers.get(chatId));
@@ -49,7 +67,13 @@ function scheduleHandoffTimeout(chatId) {
 
       // If the last message is NOT from a human agent, send contingency message
       if (lastMsg && lastMsg.remitente !== 'humano') {
-        const contingencyText = "¡Hola! Sigo aquí pendiente de tu cotización con la Master Estilista. Disculpa la pequeña demora, en un momento te damos la información detallada. 🌿✨";
+        const outside = isOutsideBusinessHours();
+        let contingencyText;
+        if (outside) {
+          contingencyText = "¡Hola! Sigo aquí pendiente de tu cotización con la Master Estilista. 🌿\n\nComo estamos fuera de nuestro horario de servicio, te daremos tu cotización a primera hora en cuanto abramos. ✨\n\n🕒 *Horario de atención:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡Gracias por tu paciencia! 💖";
+        } else {
+          contingencyText = "¡Hola! Sigo aquí pendiente de tu cotización con la Master Estilista. Disculpa la pequeña demora, en un momento te damos la información detallada. 🌿✨";
+        }
         
         await db.saveMessage(chatId, 'bot', contingencyText);
         await sendWhatsAppMessage(chatId, contingencyText);
@@ -208,11 +232,16 @@ async function connectToWhatsApp() {
           await db.toggleBot(chatId, false);
           await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
 
-          const transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
+          const outside = isOutsideBusinessHours();
+          let transitionText;
+          if (outside) {
+            transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar.\n\nComo estamos fuera de nuestro horario de servicio, te daremos tu cotización a primera hora en cuanto abramos. 🌿\n\n🕒 *Horario de atención:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡Gracias por tu paciencia! 💖";
+          } else {
+            transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
+            scheduleHandoffTimeout(chatId);
+          }
           await db.saveMessage(chatId, 'bot', transitionText);
           await sendWhatsAppMessage(chatId, transitionText);
-
-          scheduleHandoffTimeout(chatId);
           continue;
         }
 
