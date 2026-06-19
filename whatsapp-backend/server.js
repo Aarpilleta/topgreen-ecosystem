@@ -223,6 +223,10 @@ async function connectToWhatsApp() {
             console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
             await db.toggleBot(chatId, false);
             botActivo = false;
+            
+            const handoffMsg = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
+            await db.saveMessage(chatId, 'bot', handoffMsg);
+            await sendWhatsAppMessage(chatId, handoffMsg);
           }
         }
 
@@ -448,7 +452,7 @@ app.post('/api/chats/:chatId/process-pending', async (req, res) => {
       return res.json({ status: 'responded_by_bot', reply });
     } else {
       // Not eligible — send polite fallback and hand off to human
-      const fallback = 'Hola 🌿 gracias por escribirnos a TOP GREEN. En este momento nuestros asesores están atendiendo a otros clientes, en un momento te contactamos. ¡Gracias por tu paciencia! ✨';
+      const fallback = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
       await db.saveMessage(chatId, 'bot', fallback);
       await sendWhatsAppMessage(chatId, fallback);
       await db.toggleBot(chatId, false);
