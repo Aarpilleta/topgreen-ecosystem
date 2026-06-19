@@ -248,35 +248,9 @@ async function connectToWhatsApp() {
   }
 }
 
-// Background job for Anti-Ghosting (checks every 1 hour)
-setInterval(async () => {
-  try {
-    const chats = await db.getChats();
-    const now = new Date();
-
-    for (const chat of chats) {
-      if (chat.bot_activo) {
-        const history = await db.getChatMessages(chat.chat_id_whatsapp);
-        if (history.length > 0) {
-          const lastMsg = history[history.length - 1];
-          const lastMsgTime = new Date(lastMsg.fecha_hora);
-          const diffHours = (now - lastMsgTime) / (1000 * 60 * 60);
-
-          const ghostMessage = "¡Hola, hermosa! 🌿 Pasaba a saludarte y ver si tenías alguna duda sobre tu cita en TOP GREEN. ✨ Nos encantaría consentirte. ¿Te gustaría ver nuestros horarios disponibles para esta semana? 📆";
-
-          // If inactive for > 24 hours and the last message wasn't already the ghost message
-          if (diffHours >= 24 && lastMsg.texto !== ghostMessage) {
-            console.log(`[Anti-Ghosting] Enviando resucitación (/ghost-beauty) a ${chat.chat_id_whatsapp}`);
-            await db.saveMessage(chat.chat_id_whatsapp, 'bot', ghostMessage);
-            await sendWhatsAppMessage(chat.chat_id_whatsapp, ghostMessage);
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error en job de Anti-Ghosting:', err);
-  }
-}, 60 * 60 * 1000);
+// Anti-Ghosting: DESACTIVADO como job automático.
+// El mensaje de reactivación solo se envía MANUALMENTE desde el dashboard
+// usando el comando /ghost-beauty en el panel de soporte humano.
 
 // Simulator support endpoint (Dashboard client test tab)
 app.post('/webhook/whatsapp', async (req, res) => {
