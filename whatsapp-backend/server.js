@@ -631,9 +631,9 @@ app.get('/api/nomina', async (req, res) => {
 
 // Add payroll item
 app.post('/api/nomina/create', async (req, res) => {
-  const { stylist, service, amount, commission, type, date, cita_id } = req.body;
+  const { stylist, service, amount, commission, type, date, cita_id, propina } = req.body;
   try {
-    const item = await db.addPayrollItem({ stylist, service, amount, commission, type, date, cita_id });
+    const item = await db.addPayrollItem({ stylist, service, amount, commission, type, date, cita_id, propina });
     res.json(item);
   } catch (error) {
     console.error('Error al registrar nomina:', error);

@@ -108,6 +108,11 @@ async function initDb() {
           )
         `);
 
+        // Migration: add propina column to nomina table if not exists
+        await pool.query(`
+          ALTER TABLE nomina ADD COLUMN IF NOT EXISTS propina NUMERIC(10, 2) DEFAULT 0.0;
+        `);
+
         // Update stylist colors to match new preferences
         try {
           await pool.query("UPDATE estilistas SET color = '#fbbf24' WHERE nombre = 'Pili'");
@@ -690,7 +695,7 @@ const db = {
   // 6. Payroll (Nómina)
   async getPayroll() {
     if (!useFallback) {
-      const res = await pool.query('SELECT stylist, service, amount, commission, type, date FROM nomina ORDER BY id DESC');
+      const res = await pool.query('SELECT stylist, service, amount, commission, type, date, COALESCE(propina, 0) as propina FROM nomina ORDER BY id DESC');
       return res.rows;
     } else {
       const data = loadFallback();
@@ -701,8 +706,8 @@ const db = {
   async addPayrollItem(item) {
     if (!useFallback) {
       const res = await pool.query(
-        'INSERT INTO nomina (stylist, service, amount, commission, type, date, cita_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [item.stylist, item.service, item.amount, item.commission, item.type, item.date, item.cita_id || null]
+        'INSERT INTO nomina (stylist, service, amount, commission, type, date, cita_id, propina) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        [item.stylist, item.service, item.amount, item.commission, item.type, item.date, item.cita_id || null, item.propina || 0]
       );
       return res.rows[0];
     } else {

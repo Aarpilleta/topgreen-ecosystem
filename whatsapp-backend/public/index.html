@@ -1452,6 +1452,7 @@
                     service: n.service,
                     amount: Number(n.amount),
                     commission: Number(n.commission),
+                    propina: Number(n.propina) || 0,
                     type: n.type,
                     date: n.date,
                     cita_id: n.cita_id
@@ -2771,7 +2772,7 @@
                     svcComm = Math.round(basePrice * 0.30);
                 }
                 
-                const totalComm = svcComm + retailComm + tipVal;
+                const totalComm = svcComm + retailComm;
 
                 const dateStr = new Date().toISOString();
                 const citaIdVal = appObj ? appObj.id : null;
@@ -2787,6 +2788,7 @@
                             : `${serviceName} (${paymentMethod})`,
                         amount: finalTotal,
                         commission: totalComm,
+                        propina: tipVal,
                         type: "checkout",
                         date: dateStr,
                         cita_id: citaIdVal
@@ -3167,8 +3169,10 @@
             const summaryBox = document.getElementById('stylist-payroll-summary-box');
             summaryBox.innerHTML = '';
             const comms = {};
+            const tips = {};
             stylistsArray.forEach(name => {
                 comms[name] = 0;
+                tips[name] = 0;
             });
             
             const { sunday: sundayOfSelWeek, nextSunday: nextSundayOfSelWeek } = getSelectedWeekRange();
@@ -3177,6 +3181,7 @@
                 const pDate = parsePayrollDate(p.date);
                 if (pDate >= sundayOfSelWeek && pDate < nextSundayOfSelWeek) {
                     if (comms[p.stylist] !== undefined) comms[p.stylist] += p.commission;
+                    if (tips[p.stylist] !== undefined) tips[p.stylist] += (p.propina || 0);
                 }
             });
 
@@ -3187,7 +3192,10 @@
                 row.className = "flex items-center justify-between border-b border-zinc-800 pb-1 last:border-0 last:pb-0";
                 row.innerHTML = `
                     <span class="text-zinc-300 font-medium">${name}</span>
-                    <span class="font-mono font-bold text-emerald-400">$${comms[name].toLocaleString('es-MX')}</span>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-[10px] text-zinc-500 font-mono">Propina: <strong class="text-amber-500">$${tips[name].toLocaleString('es-MX')}</strong></span>
+                        <span class="font-mono font-bold text-emerald-400">$${comms[name].toLocaleString('es-MX')}</span>
+                    </div>
                 `;
                 summaryBox.appendChild(row);
             });
