@@ -557,13 +557,17 @@
                                     </div>
                                 </div>
                                 
-                                <div>
-                                    <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Insumo/Retail Extra Consumido:</label>
-                                    <select id="checkout-product-addon" onchange="handleCheckoutProductAddon()" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-zinc-300 focus:outline-none font-mono">
-                                        <option value="none">-- Ninguno --</option>
-                                        <option value="shampoo">Jade Shampoo (+ $450.00)</option>
-                                        <option value="mask">Mascarilla Elixir (+ $680.00)</option>
-                                    </select>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Insumo/Retail Extra:</label>
+                                        <select id="checkout-product-addon" onchange="handleCheckoutProductAddon()" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-zinc-300 focus:outline-none font-mono">
+                                            <option value="none">-- Ninguno --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Propina (MXN):</label>
+                                        <input type="number" id="checkout-tip" oninput="handleCheckoutProductAddon()" min="0" step="1" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                    </div>
                                 </div>
 
                                 <div>
@@ -2391,6 +2395,27 @@
                 updateLockCostPreview();
             }
 
+            // Dynamically populate product addon select from state.inventory (only retail items)
+            const selectAddon = document.getElementById('checkout-product-addon');
+            if (selectAddon) {
+                const currentAddonVal = selectAddon.value;
+                let optionsHtml = '<option value="none">-- Ninguno --</option>';
+                if (state.inventory) {
+                    Object.keys(state.inventory).forEach(key => {
+                        const item = state.inventory[key];
+                        if (item.price !== null) {
+                            optionsHtml += `<option value="${key}">${item.name} (+ $${item.price.toFixed(2)})</option>`;
+                        }
+                    });
+                }
+                selectAddon.innerHTML = optionsHtml;
+                if (Array.from(selectAddon.options).some(o => o.value === currentAddonVal)) {
+                    selectAddon.value = currentAddonVal;
+                } else {
+                    selectAddon.value = 'none';
+                }
+            }
+
             validateCheckoutSubmitButton();
             updatePOSInsumosFields();
         }
@@ -2575,6 +2600,8 @@
             }
             const target = document.getElementById('checkout-appointment-select').value;
             const addonKey = document.getElementById('checkout-product-addon').value;
+            const tipInput = document.getElementById('checkout-tip');
+            const tipVal = tipInput ? parseFloat(tipInput.value) || 0 : 0;
             
             let baseAmt = 0;
             if (target === 'direct') {
@@ -2587,10 +2614,11 @@
             }
 
             let extra = 0;
-            if (addonKey === 'shampoo') extra = state.inventory['shampoo_retail'].price;
-            if (addonKey === 'mask') extra = state.inventory['mask_retail'].price;
+            if (addonKey !== 'none' && state.inventory[addonKey]) {
+                extra = state.inventory[addonKey].price || 0;
+            }
 
-            const total = baseAmt + extra;
+            const total = baseAmt + extra + tipVal;
             document.getElementById('checkout-amount-display').value = total.toLocaleString('es-MX', {minimumFractionDigits: 2});
         }
 
@@ -2640,35 +2668,29 @@
                 let extraCost = 0;
                 let retailComm = 0;
 
-                // Handle Addon Inventory
-                if (addonKey === 'shampoo') {
-                    const item = state.inventory['shampoo_retail'];
-                    if (item.stock > 0) {
-                        await fetchAPI('/api/inventario/update', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ key_name: 'shampoo_retail', stock: item.stock - 1 })
-                        });
-                        extraPrice += item.price;
-                        extraCost += 200;
-                        retailComm = Math.round((item.price / 1.16) * 0.1);
-                    } else {
-                        throw new Error("Stock de Shampoo agotado.");
+                // Handle Addon Inventory Dynamically
+                if (addonKey !== 'none') {
+                    const item = state.inventory[addonKey];
+                    if (item) {
+                        if (item.stock > 0) {
+                            await fetchAPI('/api/inventario/update', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ key_name: addonKey, stock: item.stock - 1 })
+                            });
+                            extraPrice += item.price;
+                            extraCost += item.costPerUnit || 0;
+                            retailComm = Math.round((item.price / 1.16) * 0.1);
+                        } else {
+                            throw new Error(`Stock de ${item.name} agotado.`);
+                        }
                     }
-                } else if (addonKey === 'mask') {
-                    const item = state.inventory['mask_retail'];
-                    if (item.stock > 0) {
-                        await fetchAPI('/api/inventario/update', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ key_name: 'mask_retail', stock: item.stock - 1 })
-                        });
-                        extraPrice += item.price;
-                        extraCost += 300;
-                        retailComm = Math.round((item.price / 1.16) * 0.1);
-                    } else {
-                        throw new Error("Stock de Mascarilla agotado.");
-                    }
+                }
+
+                const tipInput = document.getElementById('checkout-tip');
+                const tipVal = tipInput ? parseFloat(tipInput.value) || 0 : 0;
+                if (tipVal < 0) {
+                    throw new Error("La propina no puede ser negativa.");
                 }
 
                 // Read entered total and extract base service price
@@ -2677,7 +2699,7 @@
                 if (enteredTotal <= 0) {
                     throw new Error("Ingrese un monto de liquidación válido.");
                 }
-                basePrice = Math.max(0, enteredTotal - extraPrice);
+                basePrice = Math.max(0, enteredTotal - extraPrice - tipVal);
 
                 // Consume inventory materials for service
                 const matchedService = state.services.find(s => s.name === serviceName);
@@ -2733,7 +2755,7 @@
                     }
                 }
 
-                const finalTotal = basePrice + extraPrice;
+                const finalTotal = basePrice + extraPrice + tipVal;
                 
                 // Algoritmo de Comisiones Blindadas
                 let svcComm = 0;
@@ -2749,7 +2771,7 @@
                     svcComm = Math.round(basePrice * 0.30);
                 }
                 
-                const totalComm = svcComm + retailComm;
+                const totalComm = svcComm + retailComm + tipVal;
 
                 const dateStr = new Date().toISOString();
                 const citaIdVal = appObj ? appObj.id : null;
@@ -2760,7 +2782,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         stylist: stylistName,
-                        service: addonKey !== 'none' ? `${serviceName} + Prod (${paymentMethod})` : `${serviceName} (${paymentMethod})`,
+                        service: tipVal > 0 
+                            ? `${serviceName} + Propina (${paymentMethod})` 
+                            : `${serviceName} (${paymentMethod})`,
                         amount: finalTotal,
                         commission: totalComm,
                         type: "checkout",
@@ -2776,9 +2800,9 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ estado: 'confirmada' })
                     });
-                    await pushAuditLog(`POS: Cobro validado de [${customerName}] por $${finalTotal} MXN usando ${paymentMethod}.`);
+                    await pushAuditLog(`POS: Cobro validado de [${customerName}] por $${finalTotal} MXN (incluye $${tipVal} propina) usando ${paymentMethod}.`);
                 } else {
-                    await pushAuditLog(`POS: Venta directa cobrada por $${finalTotal} MXN usando ${paymentMethod}.`);
+                    await pushAuditLog(`POS: Venta directa cobrada por $${finalTotal} MXN (incluye $${tipVal} propina) usando ${paymentMethod}.`);
                 }
 
                 triggerToast(`Transacción validada por $${finalTotal} MXN.`, "success");
@@ -2787,6 +2811,7 @@
                 document.getElementById('checkout-appointment-select').value = "direct";
                 document.getElementById('checkout-nanoplastia-oz').value = "0.0";
                 document.getElementById('checkout-tinte-grams').value = "0.0";
+                document.getElementById('checkout-tip').value = "0";
                 document.getElementById('checkout-insumos-container').classList.add('hidden');
                 document.getElementById('checkout-payment-method').value = "";
                 document.getElementById('checkout-amount-display').value = "";
