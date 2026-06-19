@@ -22,10 +22,117 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // =====================================================================
-// WHATSAPP WEBHOOK EMULATOR
+// WHATSAPP API & WEBHOOK
 // =====================================================================
 
+// Helper to send message via WhatsApp Cloud API
+async function sendWhatsAppMessage(to, text) {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  if (!token || !phoneNumberId) {
+    console.warn('[WhatsApp API] Advertencia: Faltan credenciales de WhatsApp (WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID).');
+    return null;
+  }
+
+  const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
+  const body = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: to,
+    type: 'text',
+    text: {
+      body: text
+    }
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[WhatsApp API] Error al enviar mensaje:', data);
+    } else {
+      console.log('[WhatsApp API] Mensaje enviado con éxito a:', to, data);
+    }
+    return data;
+  } catch (error) {
+    console.error('[WhatsApp API] Error de red al enviar mensaje:', error);
+    return null;
+  }
+}
+
 app.post('/webhook/whatsapp', async (req, res) => {
+  // 1. Check if it is a real webhook payload from Meta
+  if (req.body.object === 'whatsapp_business_account') {
+    try {
+      const entry = req.body.entry?.[0];
+      const change = entry?.changes?.[0];
+      const value = change?.value;
+      const messageObj = value?.messages?.[0];
+
+      // Meta sends status updates (sent, delivered, read) without messages. Ignore those.
+      if (!messageObj) {
+        return res.sendStatus(200);
+      }
+
+      const chatId = messageObj.from;
+      let messageText = '';
+
+      if (messageObj.type === 'text') {
+        messageText = messageObj.text?.body;
+      } else if (messageObj.type === 'interactive') {
+        const interactive = messageObj.interactive;
+        if (interactive.type === 'button_reply') {
+          messageText = interactive.button_reply?.title;
+        } else if (interactive.type === 'list_reply') {
+          messageText = interactive.list_reply?.title;
+        }
+      }
+
+      if (!messageText) {
+        console.log(`[WhatsApp Webhook] Mensaje recibido sin texto interpretable (tipo: ${messageObj.type}).`);
+        return res.sendStatus(200);
+      }
+
+      const contact = value?.contacts?.[0];
+      const clienteNombre = contact?.profile?.name || 'Cliente WhatsApp';
+
+      console.log(`[WhatsApp Webhook] Mensaje real de ${clienteNombre} (${chatId}): "${messageText}"`);
+
+      // 1. Get or create chat control
+      const chat = await db.checkOrCreateChat(chatId, clienteNombre);
+      const botActivo = chat.bot_activo;
+
+      // 2. Hybrid Routing Logic
+      if (!botActivo) {
+        console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
+        await db.saveMessage(chatId, 'cliente', messageText);
+        return res.sendStatus(200);
+      }
+
+      // 3. Process with Gemini Elena
+      console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
+      const reply = await handleConversation(chatId, messageText);
+
+      // Send the reply back to the real user via Meta API
+      await sendWhatsAppMessage(chatId, reply);
+
+      return res.sendStatus(200);
+    } catch (error) {
+      console.error('Error al procesar webhook real de WhatsApp:', error);
+      return res.sendStatus(500);
+    }
+  }
+
+  // 2. Fallback to simulator format
   const { chatId, message, clienteNombre } = req.body;
 
   if (!chatId || !message) {
@@ -33,24 +140,18 @@ app.post('/webhook/whatsapp', async (req, res) => {
   }
 
   try {
-    // 1. Get or create chat control
     const chat = await db.checkOrCreateChat(chatId, clienteNombre);
     const botActivo = chat.bot_activo;
 
-    // 2. Hybrid Routing Logic
     if (!botActivo) {
       console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
-      
-      // Save client message to DB/fallback
       await db.saveMessage(chatId, 'cliente', message);
-
       return res.json({ 
         status: 'ignored_by_bot', 
         message: 'Bot inactivo para este chat. Mensaje registrado para atención humana.' 
       });
     }
 
-    // 3. Bot is active, process with Gemini Agent
     console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
     const reply = await handleConversation(chatId, message);
 
@@ -60,7 +161,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en webhook/whatsapp:', error);
+    console.error('Error en webhook/whatsapp (simulador):', error);
     return res.status(500).json({ error: 'Error al procesar el mensaje en el servidor.' });
   }
 });
@@ -153,6 +254,12 @@ app.post('/api/chats/:chatId/send-message', async (req, res) => {
 
   try {
     const savedMsg = await db.saveMessage(chatId, 'humano', message);
+
+    // If it's a numeric chatId (real WhatsApp phone number format), send via WhatsApp API
+    if (/^\d+$/.test(chatId) && process.env.WHATSAPP_ACCESS_TOKEN) {
+      await sendWhatsAppMessage(chatId, message);
+    }
+
     res.json(savedMsg);
   } catch (error) {
     console.error('Error al enviar mensaje manual:', error);
