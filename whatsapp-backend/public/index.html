@@ -708,14 +708,19 @@
                         </div>
 
                         <!-- Bot Activation Toggle -->
-                        <div class="flex items-center space-x-3 bg-zinc-950/60 px-4 py-2 rounded-xl border border-zinc-850">
-                            <div class="flex items-center space-x-1.5">
-                                <i data-lucide="bot" class="w-4 h-4 text-emerald-400" id="active-chat-bot-icon"></i>
-                                <span class="text-xs font-semibold text-zinc-300">Asistente IA (Elena)</span>
-                            </div>
-                            <button onclick="toggleActiveChatBot()" id="btn-toggle-bot" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-emerald-500">
-                                <span id="toggle-bot-switch-dot" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5" />
+                        <div class="flex items-center space-x-2">
+                            <button id="btn-process-pending" onclick="processPendingChat()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/20 rounded-xl text-xs font-semibold transition-all duration-200">
+                                🤖 Procesar con Elena
                             </button>
+                            <div class="flex items-center space-x-3 bg-zinc-950/60 px-4 py-2 rounded-xl border border-zinc-850">
+                                <div class="flex items-center space-x-1.5">
+                                    <i data-lucide="bot" class="w-4 h-4 text-emerald-400" id="active-chat-bot-icon"></i>
+                                    <span class="text-xs font-semibold text-zinc-300">Asistente IA (Elena)</span>
+                                </div>
+                                <button onclick="toggleActiveChatBot()" id="btn-toggle-bot" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-emerald-500">
+                                    <span id="toggle-bot-switch-dot" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -3089,6 +3094,35 @@
                     // Update and load messages
                     loadChatMessages(chatId);
                 }
+            }
+        }
+
+        async function processPendingChat() {
+            if (!state.selectedChat) {
+                triggerToast('Selecciona un chat primero.', 'warning');
+                return;
+            }
+            const chatId = state.selectedChat.chat_id_whatsapp;
+            const btn = document.getElementById('btn-process-pending');
+            btn.disabled = true;
+            btn.innerHTML = 'Procesando...';
+
+            const res = await fetchAPI(`/api/chats/${chatId}/process-pending`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = '🤖 Procesar con Elena';
+
+            if (res) {
+                if (res.status === 'responded_by_bot') {
+                    triggerToast('✅ Elena respondió al cliente.', 'success');
+                } else if (res.status === 'fallback_sent') {
+                    triggerToast('💬 Mensaje de espera enviado. Chat asignado a atención humana.', 'info');
+                }
+                await loadWhatsAppChats();
+                loadChatMessages(chatId);
             }
         }
 

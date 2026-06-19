@@ -418,6 +418,45 @@ app.post('/api/chats/:chatId/toggle-bot', async (req, res) => {
   }
 });
 
+// Process a pending/unread chat manually — runs eligibility check on last client message
+app.post('/api/chats/:chatId/process-pending', async (req, res) => {
+  const { chatId } = req.params;
+
+  try {
+    const history = await db.getChatMessages(chatId);
+    const clientMessages = history.filter(m => m.remitente === 'cliente');
+
+    if (clientMessages.length === 0) {
+      return res.status(400).json({ error: 'No hay mensajes del cliente para procesar.' });
+    }
+
+    const lastClientMsg = clientMessages[clientMessages.length - 1];
+    const messageText = lastClientMsg.texto;
+
+    const eligibility = await checkBotEligibility(chatId, messageText);
+
+    if (eligibility.shouldAnswer) {
+      // Activate bot and let Elena respond
+      await db.toggleBot(chatId, true);
+      const reply = await handleConversation(chatId, messageText);
+      await sendWhatsAppMessage(chatId, reply);
+      console.log(`[Process Pending] Elena respondió a ${chatId}: "${reply.substring(0, 60)}..."`);
+      return res.json({ status: 'responded_by_bot', reply });
+    } else {
+      // Not eligible — send polite fallback and hand off to human
+      const fallback = 'Hola 🌿 gracias por escribirnos a TOP GREEN. En este momento nuestros asesores están atendiendo a otros clientes, en un momento te contactamos. ¡Gracias por tu paciencia! ✨';
+      await db.saveMessage(chatId, 'bot', fallback);
+      await sendWhatsAppMessage(chatId, fallback);
+      await db.toggleBot(chatId, false);
+      console.log(`[Process Pending] Fallback enviado a ${chatId}. Bot desactivado para atención humana.`);
+      return res.json({ status: 'fallback_sent', reply: fallback });
+    }
+  } catch (error) {
+    console.error('Error procesando chat pendiente:', error);
+    res.status(500).json({ error: 'Error al procesar chat pendiente.' });
+  }
+});
+
 // Send a manual message from support
 app.post('/api/chats/:chatId/send-message', async (req, res) => {
   const { chatId } = req.params;
