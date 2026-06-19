@@ -199,6 +199,7 @@ async function connectToWhatsApp() {
 
       for (const msg of m.messages) {
         if (msg.key.fromMe) continue;
+        if (!msg.key.remoteJid || !msg.key.remoteJid.endsWith('@s.whatsapp.net')) continue;
 
         const chatId = msg.key.remoteJid.split('@')[0];
         const clienteNombre = msg.pushName || 'Cliente WhatsApp';
