@@ -98,7 +98,7 @@ async function dbCheckAvailability(servicioId, fechaStr) {
     for (let hour = workStartHour; hour < workEndHour; hour++) {
       for (const mins of [0, 30]) {
         if (hour === 9 && mins === 0) continue; // Skip 9:00 if start is 9:30
-        if (hour + mins / 60 + duracion / 60 > workEndHour) continue;
+        if (hour + mins / 60 >= workEndHour) continue;
 
         const hh = String(hour).padStart(2, '0');
         const mm = String(mins).padStart(2, '0');

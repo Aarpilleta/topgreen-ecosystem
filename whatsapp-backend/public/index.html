@@ -575,7 +575,7 @@
                     </div>
                     
                     <button onclick="commitSecureCheckoutPayment()" id="btn-submit-payment" disabled class="w-full mt-4 bg-zinc-800 text-zinc-500 cursor-not-allowed font-black py-2.5 rounded-lg text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2">
-                        <i data-lucide="credit-card" class="h-3.5 w-3.5"></i><span>Validar e Inyectar en Libro Contable</span>
+                        <i data-lucide="credit-card" class="h-3.5 w-3.5"></i><span>Cobrar</span>
                     </button>
                 </div>
 
@@ -846,7 +846,8 @@
             chats: [],
             selectedChat: null,
             messages: [],
-            customCheckoutPrice: null
+            customCheckoutPrice: null,
+            checkoutStatusOverride: false
         };
 
         let hoursArray = ["11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
@@ -1666,7 +1667,7 @@
             const durationSlots = Math.round(sourceApp.duration * 2);
             let fits = true;
             for (let i = 0; i < durationSlots; i++) {
-                if (startIdx + i >= hoursArray.length) { fits = false; break; }
+                if (startIdx + i >= hoursArray.length) { continue; }
                 const testHr = hoursArray[startIdx + i];
                 const block = sched[targetStylist][testHr];
                 if (block && block.id !== sourceApp.id && block.type !== 'parent') { fits = false; break; }
@@ -2104,7 +2105,7 @@
             const durationSlots = Math.round(duration * 2);
             let fits = true;
             for (let i = 0; i < durationSlots; i++) {
-                if (startIdx + i >= hoursArray.length) { fits = false; break; }
+                if (startIdx + i >= hoursArray.length) { continue; }
                 const blockHr = hoursArray[startIdx + i];
                 const block = sched[stylist][blockHr];
                 if (block && block.id !== id && block.type !== 'parent') { fits = false; break; }
@@ -2212,14 +2213,15 @@
             const startIdx = hoursArray.indexOf(startHour);
             const durationSlots = Math.round(duration * 2);
             
-            if (startIdx === -1 || startIdx + durationSlots > hoursArray.length) {
-                triggerToast("La duración excede el horario operativo diario de este estilista.", "error");
+            if (startIdx === -1) {
+                triggerToast("La hora de inicio no es válida.", "error");
                 return;
             }
 
             // Check if slots are free
             let free = true;
             for (let i = 0; i < durationSlots; i++) {
+                if (startIdx + i >= hoursArray.length) { continue; }
                 const hr = hoursArray[startIdx + i];
                 if (sched[stylist][hr]) { free = false; break; }
             }
@@ -2252,6 +2254,9 @@
 
         // COBRO POS WIDGETS
         function populateCheckoutFormWidgets() {
+            if (state.checkoutStatusOverride) {
+                return;
+            }
             const selectApp = document.getElementById('checkout-appointment-select');
             const selectSrv = document.getElementById('checkout-service-select');
             const selectChStylist = document.getElementById('checkout-stylist-select');
@@ -2570,6 +2575,10 @@
         }
 
         async function commitSecureCheckoutPayment() {
+            const submitBtn = document.getElementById('btn-submit-payment');
+            if (submitBtn.disabled) return;
+            submitBtn.disabled = true;
+
             const target = document.getElementById('checkout-appointment-select').value;
             const srvId = document.getElementById('checkout-service-select').value;
             const addonKey = document.getElementById('checkout-product-addon').value;
@@ -2578,188 +2587,213 @@
 
             if (!paymentMethod) {
                 triggerToast("Seleccione un método de pago obligatorio.", "error");
+                submitBtn.disabled = false;
                 return;
             }
 
-            let customerName = "Venta Directa";
-            let serviceName = "";
-            let basePrice = 0;
-            let stylistName = "";
-            let appObj = null;
+            // Set state flag and show processing message
+            state.checkoutStatusOverride = true;
+            document.getElementById('checkout-status-text').innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1 animate-pulse"></span>Procesando cobro...`;
 
-            if (target !== 'direct') {
-                const [st, hr] = target.split('|');
-                appObj = sched[st][hr];
-                customerName = appObj.customer;
-                serviceName = appObj.service;
-                basePrice = appObj.cost;
-                stylistName = st;
-            } else {
-                const srv = state.services.find(s => s.id == srvId);
-                serviceName = srv ? srv.name : "";
-                basePrice = srv ? srv.price : 0;
-                stylistName = document.getElementById('checkout-stylist-select').value;
-            }
+            try {
+                let customerName = "Venta Directa";
+                let serviceName = "";
+                let basePrice = 0;
+                let stylistName = "";
+                let appObj = null;
 
-            let extraPrice = 0;
-            let extraCost = 0;
-            let retailComm = 0;
-
-            // Handle Addon Inventory
-            if (addonKey === 'shampoo') {
-                const item = state.inventory['shampoo_retail'];
-                if (item.stock > 0) {
-                    await fetchAPI('/api/inventario/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key_name: 'shampoo_retail', stock: item.stock - 1 })
-                    });
-                    extraPrice += item.price;
-                    extraCost += 200;
-                    retailComm = Math.round((item.price / 1.16) * 0.1);
+                if (target !== 'direct') {
+                    const [st, hr] = target.split('|');
+                    appObj = sched[st][hr];
+                    customerName = appObj.customer;
+                    serviceName = appObj.service;
+                    basePrice = appObj.cost;
+                    stylistName = st;
                 } else {
-                    triggerToast("Stock de Shampoo agotado.", "error");
-                    return;
+                    const srv = state.services.find(s => s.id == srvId);
+                    serviceName = srv ? srv.name : "";
+                    basePrice = srv ? srv.price : 0;
+                    stylistName = document.getElementById('checkout-stylist-select').value;
                 }
-            } else if (addonKey === 'mask') {
-                const item = state.inventory['mask_retail'];
-                if (item.stock > 0) {
-                    await fetchAPI('/api/inventario/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key_name: 'mask_retail', stock: item.stock - 1 })
-                    });
-                    extraPrice += item.price;
-                    extraCost += 300;
-                    retailComm = Math.round((item.price / 1.16) * 0.1);
-                } else {
-                    triggerToast("Stock de Mascarilla agotado.", "error");
-                    return;
+
+                let extraPrice = 0;
+                let extraCost = 0;
+                let retailComm = 0;
+
+                // Handle Addon Inventory
+                if (addonKey === 'shampoo') {
+                    const item = state.inventory['shampoo_retail'];
+                    if (item.stock > 0) {
+                        await fetchAPI('/api/inventario/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key_name: 'shampoo_retail', stock: item.stock - 1 })
+                        });
+                        extraPrice += item.price;
+                        extraCost += 200;
+                        retailComm = Math.round((item.price / 1.16) * 0.1);
+                    } else {
+                        throw new Error("Stock de Shampoo agotado.");
+                    }
+                } else if (addonKey === 'mask') {
+                    const item = state.inventory['mask_retail'];
+                    if (item.stock > 0) {
+                        await fetchAPI('/api/inventario/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key_name: 'mask_retail', stock: item.stock - 1 })
+                        });
+                        extraPrice += item.price;
+                        extraCost += 300;
+                        retailComm = Math.round((item.price / 1.16) * 0.1);
+                    } else {
+                        throw new Error("Stock de Mascarilla agotado.");
+                    }
                 }
-            }
 
-            // Read entered total and extract base service price
-            const totalInputVal = document.getElementById('checkout-amount-display').value;
-            const enteredTotal = parseFloat(totalInputVal.replace(/[^0-9.]/g, '')) || 0;
-            if (enteredTotal <= 0) {
-                triggerToast("Ingrese un monto de liquidación válido.", "error");
-                return;
-            }
-            basePrice = Math.max(0, enteredTotal - extraPrice);
+                // Read entered total and extract base service price
+                const totalInputVal = document.getElementById('checkout-amount-display').value;
+                const enteredTotal = parseFloat(totalInputVal.replace(/[^0-9.]/g, '')) || 0;
+                if (enteredTotal <= 0) {
+                    throw new Error("Ingrese un monto de liquidación válido.");
+                }
+                basePrice = Math.max(0, enteredTotal - extraPrice);
 
-            // Consume inventory materials for service
-            const matchedService = state.services.find(s => s.name === serviceName);
-            let productCost = 0;
-            let qtyToDeduct = 0;
-            const normSrvName = serviceName.toLowerCase();
-            const unit = state.unitPreference;
-            
-            if (normSrvName.includes('nanoplastia')) {
-                const ozInput = document.getElementById('checkout-nanoplastia-oz');
-                const insumoVal = ozInput ? parseFloat(ozInput.value) || 0 : 0;
+                // Consume inventory materials for service
+                const matchedService = state.services.find(s => s.name === serviceName);
+                let productCost = 0;
+                let qtyToDeduct = 0;
+                const normSrvName = serviceName.toLowerCase();
+                const unit = state.unitPreference;
                 
-                if (unit === 'oz') {
-                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 10) {
-                        triggerToast("Ingrese un valor de onzas de Nanoplastia entre 0.0 y 10.0", "error");
-                        return;
+                if (normSrvName.includes('nanoplastia')) {
+                    const ozInput = document.getElementById('checkout-nanoplastia-oz');
+                    const insumoVal = ozInput ? parseFloat(ozInput.value) || 0 : 0;
+                    
+                    if (unit === 'oz') {
+                        if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 10) {
+                            throw new Error("Ingrese un valor de onzas de Nanoplastia entre 0.0 y 10.0");
+                        }
+                        productCost = insumoVal * 100;
+                        qtyToDeduct = Math.round(insumoVal * 30);
+                    } else {
+                        if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 300) {
+                            throw new Error("Ingrese un valor de mililitros (ml) de Nanoplastia entre 0.0 y 300.0");
+                        }
+                        productCost = insumoVal * (100 / 30);
+                        qtyToDeduct = Math.round(insumoVal);
                     }
-                    productCost = insumoVal * 100;
-                    qtyToDeduct = Math.round(insumoVal * 30);
-                } else {
-                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 300) {
-                        triggerToast("Ingrese un valor de mililitros (ml) de Nanoplastia entre 0.0 y 300.0", "error");
-                        return;
+                } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
+                    const gramsInput = document.getElementById('checkout-tinte-grams');
+                    const insumoVal = gramsInput ? parseFloat(gramsInput.value) || 0 : 0;
+                    
+                    if (unit === 'oz') {
+                        if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 7) {
+                            throw new Error("Ingrese un valor de onzas de tinte entre 0.0 y 7.0");
+                        }
+                        productCost = insumoVal * 120;
+                        qtyToDeduct = Math.round(insumoVal * 30);
+                    } else {
+                        if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 200) {
+                            throw new Error("Ingrese un valor de mililitros (ml) de tinte entre 0.0 y 200.0");
+                        }
+                        productCost = insumoVal * 4;
+                        qtyToDeduct = Math.round(insumoVal);
                     }
-                    productCost = insumoVal * (100 / 30);
-                    qtyToDeduct = Math.round(insumoVal);
                 }
-            } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
-                const gramsInput = document.getElementById('checkout-tinte-grams');
-                const insumoVal = gramsInput ? parseFloat(gramsInput.value) || 0 : 0;
+
+                if (matchedService && matchedService.stockKey) {
+                    const item = state.inventory[matchedService.stockKey];
+                    if (item.stock >= qtyToDeduct) {
+                        await fetchAPI('/api/inventario/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key_name: matchedService.stockKey, stock: item.stock - qtyToDeduct })
+                        });
+                    }
+                }
+
+                const finalTotal = basePrice + extraPrice;
                 
-                if (unit === 'oz') {
-                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 7) {
-                        triggerToast("Ingrese un valor de onzas de tinte entre 0.0 y 7.0", "error");
-                        return;
-                    }
-                    productCost = insumoVal * 120; // 4 * 30
-                    qtyToDeduct = Math.round(insumoVal * 30);
+                // Algoritmo de Comisiones Blindadas
+                let svcComm = 0;
+                if (normSrvName.includes('nanoplastia')) {
+                    svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
+                } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
+                    svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
+                } else if (normSrvName.includes('uña') || normSrvName.includes('man-ped')) {
+                    svcComm = Math.round(basePrice * 0.45);
+                } else if (normSrvName.includes('pestaña') || normSrvName.includes('corte')) {
+                    svcComm = Math.round(basePrice * 0.40);
                 } else {
-                    if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 200) {
-                        triggerToast("Ingrese un valor de mililitros (ml) de tinte entre 0.0 y 200.0", "error");
-                        return;
-                    }
-                    productCost = insumoVal * 4;
-                    qtyToDeduct = Math.round(insumoVal);
+                    svcComm = Math.round(basePrice * 0.30);
                 }
-            }
+                
+                const totalComm = svcComm + retailComm;
 
-            if (matchedService && matchedService.stockKey) {
-                const item = state.inventory[matchedService.stockKey];
-                if (item.stock >= qtyToDeduct) {
-                    await fetchAPI('/api/inventario/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key_name: matchedService.stockKey, stock: item.stock - qtyToDeduct })
-                    });
-                }
-            }
+                const dateStr = new Date().toISOString();
+                const citaIdVal = appObj ? appObj.id : null;
 
-            const finalTotal = basePrice + extraPrice;
-            
-            // Algoritmo de Comisiones Blindadas
-            let svcComm = 0;
-            if (normSrvName.includes('nanoplastia')) {
-                svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
-            } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
-                svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
-            } else if (normSrvName.includes('uña') || normSrvName.includes('man-ped')) {
-                svcComm = Math.round(basePrice * 0.45);
-            } else if (normSrvName.includes('pestaña') || normSrvName.includes('corte')) {
-                svcComm = Math.round(basePrice * 0.40);
-            } else {
-                svcComm = Math.round(basePrice * 0.30);
-            }
-            
-            const totalComm = svcComm + retailComm;
-
-            const dateStr = new Date().toISOString();
-            const citaIdVal = appObj ? appObj.id : null;
-
-            // Add Nomina Item
-            await fetchAPI('/api/nomina/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stylist: stylistName,
-                    service: addonKey !== 'none' ? `${serviceName} + Prod (${paymentMethod})` : `${serviceName} (${paymentMethod})`,
-                    amount: finalTotal,
-                    commission: totalComm,
-                    type: "checkout",
-                    date: dateStr,
-                    cita_id: citaIdVal
-                })
-            });
-
-            // Update app status in DB
-            if (appObj) {
-                await fetchAPI(`/api/citas/${appObj.id}/update-status`, {
+                // Add Nomina Item
+                await fetchAPI('/api/nomina/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ estado: 'confirmada' })
+                    body: JSON.stringify({
+                        stylist: stylistName,
+                        service: addonKey !== 'none' ? `${serviceName} + Prod (${paymentMethod})` : `${serviceName} (${paymentMethod})`,
+                        amount: finalTotal,
+                        commission: totalComm,
+                        type: "checkout",
+                        date: dateStr,
+                        cita_id: citaIdVal
+                    })
                 });
-                await pushAuditLog(`POS: Cobro validado de [${customerName}] por $${finalTotal} MXN usando ${paymentMethod}.`);
-} else {
-                await pushAuditLog(`POS: Venta directa cobrada por $${finalTotal} MXN usando ${paymentMethod}.`);
-            }
 
-            triggerToast(`Transacción validada por $${finalTotal} MXN.`, "success");
-            document.getElementById('checkout-appointment-select').value = "direct";
-            document.getElementById('checkout-nanoplastia-oz').value = "0.0";
-            document.getElementById('checkout-tinte-grams').value = "0.0";
-            document.getElementById('checkout-insumos-container').classList.add('hidden');
-            state.customCheckoutPrice = null;
-            loadState();
+                // Update app status in DB
+                if (appObj) {
+                    await fetchAPI(`/api/citas/${appObj.id}/update-status`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ estado: 'confirmada' })
+                    });
+                    await pushAuditLog(`POS: Cobro validado de [${customerName}] por $${finalTotal} MXN usando ${paymentMethod}.`);
+                } else {
+                    await pushAuditLog(`POS: Venta directa cobrada por $${finalTotal} MXN usando ${paymentMethod}.`);
+                }
+
+                triggerToast(`Transacción validada por $${finalTotal} MXN.`, "success");
+                
+                // Reset fields
+                document.getElementById('checkout-appointment-select').value = "direct";
+                document.getElementById('checkout-nanoplastia-oz').value = "0.0";
+                document.getElementById('checkout-tinte-grams').value = "0.0";
+                document.getElementById('checkout-insumos-container').classList.add('hidden');
+                document.getElementById('checkout-payment-method').value = "";
+                document.getElementById('checkout-amount-display').value = "";
+                state.customCheckoutPrice = null;
+                
+                // Show success dot/text
+                document.getElementById('checkout-status-text').innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1"></span>Cobro exitoso`;
+                
+                await loadState();
+
+                setTimeout(() => {
+                    state.checkoutStatusOverride = false;
+                    populateCheckoutFormWidgets();
+                }, 3000);
+
+            } catch (err) {
+                console.error("Error processing checkout payment:", err);
+                triggerToast(err.message || "Error al procesar la transacción.", "error");
+                
+                document.getElementById('checkout-status-text').innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 mr-1"></span>Cobro fallido: ${err.message || 'Error de servidor'}`;
+                submitBtn.disabled = false;
+
+                setTimeout(() => {
+                    state.checkoutStatusOverride = false;
+                    populateCheckoutFormWidgets();
+                }, 3000);
+            }
         }
 
         // DYNAMIC FILTERING & CROSS-VALIDATION SELECTORS
