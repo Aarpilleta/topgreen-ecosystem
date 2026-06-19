@@ -431,6 +431,10 @@ app.post('/api/chats/:chatId/process-pending', async (req, res) => {
     }
 
     const lastClientMsg = clientMessages[clientMessages.length - 1];
+    const msgAge = (Date.now() - new Date(lastClientMsg.fecha_hora)) / (1000 * 60 * 60);
+    if (msgAge > 24) {
+      return res.status(400).json({ error: 'El último mensaje tiene más de 24 horas. No se procesará.' });
+    }
     const messageText = lastClientMsg.texto;
 
     const eligibility = await checkBotEligibility(chatId, messageText);
