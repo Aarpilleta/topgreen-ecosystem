@@ -75,6 +75,93 @@ async function sendWhatsAppMessage(to, text) {
   }
 }
 
+// Handoff Timers memory map
+const handoffTimers = new Map();
+
+function scheduleHandoffTimeout(chatId) {
+  if (handoffTimers.has(chatId)) {
+    clearTimeout(handoffTimers.get(chatId));
+  }
+
+  const timer = setTimeout(async () => {
+    try {
+      const history = await db.getChatMessages(chatId);
+      const lastMsg = history[history.length - 1];
+
+      // If the last message is NOT from a human agent, send contingency message
+      if (lastMsg && lastMsg.remitente !== 'humano') {
+        const contingencyText = "¡Hola! Sigo aquí pendiente de tu cotización con la Master Estilista. Disculpa la pequeña demora, en un momento te damos la información detallada. 🌿✨";
+        
+        await db.saveMessage(chatId, 'bot', contingencyText);
+        await sendWhatsAppMessage(chatId, contingencyText);
+        console.log(`[Handoff Timeout] Mensaje de contingencia enviado a ${chatId}.`);
+      }
+    } catch (err) {
+      console.error('Error en handoff timeout:', err);
+    } finally {
+      handoffTimers.delete(chatId);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+
+  handoffTimers.set(chatId, timer);
+}
+
+// Helper to determine if the bot is eligible to answer
+async function checkBotEligibility(chatId, messageText) {
+  // 1. Always answer if it's an ad message
+  const isAd = /nanoplastia/i.test(messageText) || /ipl/i.test(messageText) || /micropigmentacion|micropigmentación/i.test(messageText);
+  if (isAd) return { shouldAnswer: true, isAd: true };
+
+  // 2. Load history to check for first-time or 2 months inactivity
+  const history = await db.getChatMessages(chatId);
+  const clientMessages = history.filter(m => m.remitente === 'cliente');
+
+  if (clientMessages.length === 0) {
+    return { shouldAnswer: true, isAd: false, isFirstTime: true };
+  }
+
+  const lastClientMsg = clientMessages[clientMessages.length - 1];
+  const lastMsgDate = new Date(lastClientMsg.fecha_hora);
+  const twoMonthsAgo = new Date();
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+  if (lastMsgDate < twoMonthsAgo) {
+    return { shouldAnswer: true, isAd: false, isInactive: true };
+  }
+
+  return { shouldAnswer: false, isAd: false };
+}
+
+// Background job for Anti-Ghosting (checks every 1 hour)
+setInterval(async () => {
+  try {
+    const chats = await db.getChats();
+    const now = new Date();
+
+    for (const chat of chats) {
+      if (chat.bot_activo) {
+        const history = await db.getChatMessages(chat.chat_id_whatsapp);
+        if (history.length > 0) {
+          const lastMsg = history[history.length - 1];
+          const lastMsgTime = new Date(lastMsg.fecha_hora);
+          const diffHours = (now - lastMsgTime) / (1000 * 60 * 60);
+
+          const ghostMessage = "¡Hola, hermosa! 🌿 Pasaba a saludarte y ver si tenías alguna duda sobre tu cita en TOP GREEN. ✨ Nos encantaría consentirte. ¿Te gustaría ver nuestros horarios disponibles para esta semana? 📆";
+
+          // If inactive for > 24 hours and the last message wasn't already the ghost message
+          if (diffHours >= 24 && lastMsg.texto !== ghostMessage) {
+            console.log(`[Anti-Ghosting] Enviando resucitación (/ghost-beauty) a ${chat.chat_id_whatsapp}`);
+            await db.saveMessage(chat.chat_id_whatsapp, 'bot', ghostMessage);
+            await sendWhatsAppMessage(chat.chat_id_whatsapp, ghostMessage);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error en job de Anti-Ghosting:', err);
+  }
+}, 60 * 60 * 1000);
+
 app.post('/webhook/whatsapp', async (req, res) => {
   // 1. Check if it is a real webhook payload from Meta
   if (req.body.object === 'whatsapp_business_account') {
@@ -91,8 +178,11 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
       const chatId = messageObj.from;
       let messageText = '';
+      const isMedia = messageObj.type === 'image' || messageObj.type === 'video';
 
-      if (messageObj.type === 'text') {
+      if (isMedia) {
+        messageText = '[Archivo multimedia recibido]';
+      } else if (messageObj.type === 'text') {
         messageText = messageObj.text?.body;
       } else if (messageObj.type === 'interactive') {
         const interactive = messageObj.interactive;
@@ -115,16 +205,42 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
       // 1. Get or create chat control
       const chat = await db.checkOrCreateChat(chatId, clienteNombre);
-      const botActivo = chat.bot_activo;
+      let botActivo = chat.bot_activo;
 
-      // 2. Hybrid Routing Logic
+      // 2. Media Handoff Logic (Flow A Paso 3)
+      if (botActivo && isMedia) {
+        console.log(`[Media Handoff] Cliente ${chatId} envió archivo. Activando Handoff.`);
+        await db.toggleBot(chatId, false);
+        await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
+
+        const transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
+        await db.saveMessage(chatId, 'bot', transitionText);
+        await sendWhatsAppMessage(chatId, transitionText);
+
+        // Schedule the 5-minute timeout for agent response
+        scheduleHandoffTimeout(chatId);
+
+        return res.sendStatus(200);
+      }
+
+      // 3. Bot Eligibility Verification
+      if (botActivo) {
+        const eligibility = await checkBotEligibility(chatId, messageText);
+        if (!eligibility.shouldAnswer) {
+          console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
+          await db.toggleBot(chatId, false);
+          botActivo = false;
+        }
+      }
+
+      // 4. Hybrid Routing Logic
       if (!botActivo) {
         console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
         await db.saveMessage(chatId, 'cliente', messageText);
         return res.sendStatus(200);
       }
 
-      // 3. Process with Gemini Elena
+      // 5. Process with Gemini Elena
       console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
       const reply = await handleConversation(chatId, messageText);
 
@@ -147,10 +263,37 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
   try {
     const chat = await db.checkOrCreateChat(chatId, clienteNombre);
-    const botActivo = chat.bot_activo;
+    let botActivo = chat.bot_activo;
+
+    const isSimulatedMedia = message.startsWith('[IMAGEN]') || message.startsWith('[VIDEO]') || message.startsWith('[FOTO]');
+
+    if (botActivo && isSimulatedMedia) {
+      console.log(`[Media Handoff Sim] Cliente ${chatId} envió archivo simulado. Activando Handoff.`);
+      await db.toggleBot(chatId, false);
+      await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
+
+      const transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
+      await db.saveMessage(chatId, 'bot', transitionText);
+
+      scheduleHandoffTimeout(chatId);
+
+      return res.json({
+        status: 'handoff_triggered',
+        reply: transitionText
+      });
+    }
+
+    if (botActivo) {
+      const eligibility = await checkBotEligibility(chatId, message);
+      if (!eligibility.shouldAnswer) {
+        console.log(`[Eligibility Sim] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
+        await db.toggleBot(chatId, false);
+        botActivo = false;
+      }
+    }
 
     if (!botActivo) {
-      console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
+      console.log(`[Hybrid Logic Sim] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
       await db.saveMessage(chatId, 'cliente', message);
       return res.json({ 
         status: 'ignored_by_bot', 
@@ -158,7 +301,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
       });
     }
 
-    console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
+    console.log(`[Hybrid Logic Sim] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
     const reply = await handleConversation(chatId, message);
 
     return res.json({
@@ -258,12 +401,23 @@ app.post('/api/chats/:chatId/send-message', async (req, res) => {
     return res.status(400).json({ error: 'Falta el mensaje.' });
   }
 
+  // Clear 5-minute handoff timeout if human agent replies
+  if (handoffTimers.has(chatId)) {
+    clearTimeout(handoffTimers.get(chatId));
+    handoffTimers.delete(chatId);
+  }
+
+  let finalMessage = message;
+  if (message.trim() === '/ghost-beauty') {
+    finalMessage = "¡Hola, hermosa! 🌿 Pasaba a saludarte y ver si tenías alguna duda sobre tu cita en TOP GREEN. ✨ Nos encantaría consentirte. ¿Te gustaría ver nuestros horarios disponibles para esta semana? 📆";
+  }
+
   try {
-    const savedMsg = await db.saveMessage(chatId, 'humano', message);
+    const savedMsg = await db.saveMessage(chatId, 'humano', finalMessage);
 
     // If it's a numeric chatId (real WhatsApp phone number format), send via WhatsApp API
     if (/^\d+$/.test(chatId) && process.env.WHATSAPP_ACCESS_TOKEN) {
-      await sendWhatsAppMessage(chatId, message);
+      await sendWhatsAppMessage(chatId, finalMessage);
     }
 
     res.json(savedMsg);
