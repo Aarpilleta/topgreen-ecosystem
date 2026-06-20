@@ -26,13 +26,23 @@ const initialData = {
     { id: 1, nombre: 'Pili', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#10b981', activo: true },
     { id: 2, nombre: 'Joel', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#3b82f6', activo: true },
     { id: 3, nombre: 'Rose', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Depilación IPL', 'Pestañas', 'Lifting', 'Maquillaje', 'Botox Capilar'], color: '#a855f7', activo: true },
-    { id: 4, nombre: 'Majo', especialidades: ['Uñas', 'Pestañas', 'Lifting', 'Corte Premium', 'Tinte de Cobertura'], color: '#ec4899', activo: true },
+    { id: 4, nombre: 'Majo', especialidades: [
+      'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
+      'Pestañas volumen', 'Efecto rimel', 'Extensiones clásicas', 'Extensiones híbridas', 'Retoque clásicas', 'Retoque efecto rímel', 'Retoque híbrida', 'Retoque volumen', 'Retiro pestañas', 'Pestañas de tira', 'Lifting de pestañas', 'Lifting de pestañas/tinta',
+      'Limpieza profunda', 'Humectación',
+      'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+      'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente'
+    ], color: '#ec4899', activo: true },
     { id: 5, nombre: 'Cande', especialidades: ['Uñas'], color: '#f43f5e', activo: true },
     { id: 6, nombre: 'Judith', especialidades: ['Uñas'], color: '#f59e0b', activo: true },
     { id: 7, nombre: 'Laura', especialidades: ['Uñas', 'Lifting'], color: '#14b8a6', activo: true },
     { id: 8, nombre: 'Lizbeth', especialidades: ['Microblading', 'Micropigmentación'], color: '#d97706', activo: true },
-    { id: 9, nombre: 'Fran', especialidades: ['Corte Premium'], color: '#6366f1', activo: true },
-    { id: 10, nombre: 'Tony', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#06b6d4', activo: true }
+    { id: 9, nombre: 'Fran', especialidades: ['Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero'], color: '#6366f1', activo: true },
+    { id: 10, nombre: 'Tony', especialidades: [
+      'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+      'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+      'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido'
+    ], color: '#06b6d4', activo: true }
   ],
   inventario: [
     { key_name: 'nanoplastia_elixir', nombre: 'Elixir Nanoplastia (ml)', stock: 1500, min: 500, cost_per_unit: 1.50, price: null, item_type: 'insumo' },
@@ -125,9 +135,21 @@ async function initDb() {
           await pool.query("UPDATE estilistas SET color = '#854d0e' WHERE nombre = 'Fran'");
           await pool.query("UPDATE estilistas SET color = '#fb923c' WHERE nombre = 'Tony'");
           
-          // Update specialties for Majo and Tony
-          await pool.query("UPDATE estilistas SET especialidades = '{\"Uñas\", \"Pestañas\", \"Lifting\", \"Corte Premium\", \"Tinte de Cobertura\"}' WHERE nombre = 'Majo'");
-          await pool.query("UPDATE estilistas SET especialidades = '{\"Nanoplastia Premium\", \"Balayage Premium\", \"Corte Premium\", \"Tinte de Cobertura\", \"Botox Capilar\"}' WHERE nombre = 'Tony'");
+          // Update specialties for Majo (nails, lashes, lifting, facials, cuts, color)
+          await pool.query(`UPDATE estilistas SET especialidades = ARRAY[
+            'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
+            'Pestañas volumen', 'Efecto rimel', 'Extensiones clásicas', 'Extensiones híbridas', 'Retoque clásicas', 'Retoque efecto rímel', 'Retoque híbrida', 'Retoque volumen', 'Retiro pestañas', 'Pestañas de tira', 'Lifting de pestañas', 'Lifting de pestañas/tinta',
+            'Limpieza profunda', 'Humectación',
+            'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+            'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente'
+          ] WHERE nombre = 'Majo'`);
+
+          // Update specialties for Tony (cuts, color, peinados - no cejas, IPL, cera, lifting, treatments)
+          await pool.query(`UPDATE estilistas SET especialidades = ARRAY[
+            'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+            'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+            'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido'
+          ] WHERE nombre = 'Tony'`);
           
           console.log('Stylists colors and specialties updated successfully in PostgreSQL.');
         } catch (colorErr) {
