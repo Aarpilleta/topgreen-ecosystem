@@ -91,12 +91,38 @@ function scheduleHandoffTimeout(chatId) {
 
 // Helper to determine if the bot is eligible to answer
 async function checkBotEligibility(chatId, messageText) {
-  // 1. Always answer if it's an ad message
+  // 1. Always answer if it's an ad message from the client
   const isAd = /nanoplastia/i.test(messageText) || /ipl/i.test(messageText) || /micropigmentacion|micropigmentación/i.test(messageText);
   if (isAd) return { shouldAnswer: true, isAd: true };
 
-  // 2. Load history to check for first-time or 2 months inactivity
+  // 2. Load history
   const history = await db.getChatMessages(chatId);
+
+  // 3. Check if the last message in history was an outgoing ad or welcome template sent recently (last 24h)
+  if (history.length > 0) {
+    const lastMsg = history[history.length - 1];
+    const isOutgoing = lastMsg.remitente === 'bot' || lastMsg.remitente === 'humano';
+    const isRecent = (Date.now() - new Date(lastMsg.fecha_hora)) < 24 * 60 * 60 * 1000;
+    
+    if (isOutgoing && isRecent) {
+      const isTemplateOrAd = /nanoplastia/i.test(lastMsg.texto) || 
+                             /ipl/i.test(lastMsg.texto) || 
+                             /micropigmentacion|micropigmentación/i.test(lastMsg.texto) ||
+                             /promocion|promoción/i.test(lastMsg.texto) ||
+                             /descuento/i.test(lastMsg.texto) ||
+                             /anuncio/i.test(lastMsg.texto) ||
+                             /bienvenida|bienvenido/i.test(lastMsg.texto) ||
+                             /gracias por escribir/i.test(lastMsg.texto) ||
+                             /interés|interes/i.test(lastMsg.texto);
+      
+      if (isTemplateOrAd) {
+        console.log(`[Eligibility] Detectado último mensaje saliente como ad/plantilla reciente para ${chatId}. El bot responderá.`);
+        return { shouldAnswer: true, isAd: true, isTemplateResponse: true };
+      }
+    }
+  }
+
+  // 4. Load history to check for first-time or 2 months inactivity
   const clientMessages = history.filter(m => m.remitente === 'cliente');
 
   if (clientMessages.length === 0) {
@@ -140,6 +166,59 @@ async function sendWhatsAppMessage(to, text) {
   }
 }
 
+// Helper to extract text from any nested Baileys/WhatsApp message structure
+function extractTextFromAnyMessage(message) {
+  if (!message) return '';
+
+  // 1. Simple text
+  if (typeof message === 'string') return message;
+  if (message.conversation) return message.conversation;
+
+  // 2. Extended text
+  if (message.extendedTextMessage?.text) return message.extendedTextMessage.text;
+
+  // 3. Media caption
+  if (message.imageMessage?.caption) return message.imageMessage.caption;
+  if (message.videoMessage?.caption) return message.videoMessage.caption;
+  if (message.documentMessage?.caption) return message.documentMessage.caption;
+
+  // 4. Buttons and Template responses (when user replies)
+  if (message.buttonsResponseMessage?.selectedDisplayText) return message.buttonsResponseMessage.selectedDisplayText;
+  if (message.buttonsResponseMessage?.selectedButtonId) return message.buttonsResponseMessage.selectedButtonId;
+  if (message.templateButtonReplyMessage?.selectedDisplayText) return message.templateButtonReplyMessage.selectedDisplayText;
+  if (message.templateButtonReplyMessage?.selectedId) return message.templateButtonReplyMessage.selectedId;
+  if (message.listResponseMessage?.singleSelectReply?.selectedRowId) return message.listResponseMessage.singleSelectReply.selectedRowId;
+  if (message.listResponseMessage?.title) return message.listResponseMessage.title;
+  if (message.interactiveResponseMessage?.bodyText) return message.interactiveResponseMessage.bodyText;
+  if (message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) return message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson;
+
+  // 5. Outgoing/Incoming Templates/Interactive (when they are sent/received)
+  if (message.buttonsMessage?.contentText) return message.buttonsMessage.contentText;
+  
+  if (message.templateMessage) {
+    const tmpl = message.templateMessage;
+    const hydTmpl = tmpl.hydratedTemplate || tmpl.hydratedFourRowTemplate;
+    if (hydTmpl?.hydratedContentText) return hydTmpl.hydratedContentText;
+  }
+
+  if (message.interactiveMessage) {
+    const im = message.interactiveMessage;
+    if (im.body?.text) return im.body.text;
+  }
+
+  // Fallback: check if there's any text in known sub-structures
+  const subMsg = message.ephemeralMessage?.message || 
+                 message.viewOnceMessage?.message || 
+                 message.viewOnceMessageV2?.message || 
+                 message.documentWithCaptionMessage?.message;
+  
+  if (subMsg) {
+    return extractTextFromAnyMessage(subMsg);
+  }
+
+  return '';
+}
+
 // Helper to extract text and media state from a Baileys message structure, unwrapping ephemeral/view-once containers
 function getMessageTextAndMedia(msg) {
   let message = msg.message;
@@ -155,24 +234,9 @@ function getMessageTextAndMedia(msg) {
 
   const isMedia = !!(message.imageMessage || message.videoMessage || message.documentMessage || message.audioMessage);
   
-  let text = 
-    message.conversation ||
-    message.extendedTextMessage?.text ||
-    message.imageMessage?.caption ||
-    message.videoMessage?.caption ||
-    message.buttonsResponseMessage?.selectedButtonId ||
-    message.templateButtonReplyMessage?.selectedId ||
-    message.listResponseMessage?.singleSelectReply?.selectedRowId ||
-    message.listResponseMessage?.title ||
-    message.interactiveResponseMessage?.bodyText ||
-    message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
-    '';
+  const text = extractTextFromAnyMessage(message);
 
-  if (isMedia && !text) {
-    text = '[Archivo multimedia recibido]';
-  }
-
-  return { text, isMedia };
+  return { text: text || (isMedia ? '[Archivo multimedia recibido]' : ''), isMedia };
 }
 
 // Main socket initialization and event loop
@@ -234,8 +298,23 @@ async function connectToWhatsApp() {
 
       for (const msg of m.messages) {
         try {
-          if (msg.key.fromMe) continue;
           if (!msg.key.remoteJid || !msg.key.remoteJid.endsWith('@s.whatsapp.net')) continue;
+
+          if (msg.key.fromMe) {
+            const chatId = msg.key.remoteJid.split('@')[0];
+            const { text: messageText } = getMessageTextAndMedia(msg);
+            if (messageText) {
+              const history = await db.getChatMessages(chatId);
+              const isDuplicate = history.some(m => m.texto === messageText);
+              if (!isDuplicate) {
+                console.log(`[WhatsApp Socket] Registrando mensaje saliente externo para ${chatId}: "${messageText.substring(0, 60)}..."`);
+                const sender = messageText.toLowerCase().includes('elena') || messageText.toLowerCase().includes('top green') ? 'bot' : 'humano';
+                await db.checkOrCreateChat(chatId, msg.pushName || 'Cliente WhatsApp');
+                await db.saveMessage(chatId, sender, messageText);
+              }
+            }
+            continue;
+          }
 
           const chatId = msg.key.remoteJid.split('@')[0];
           const clienteNombre = msg.pushName || 'Cliente WhatsApp';
