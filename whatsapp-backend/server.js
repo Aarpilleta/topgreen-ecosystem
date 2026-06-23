@@ -140,6 +140,41 @@ async function sendWhatsAppMessage(to, text) {
   }
 }
 
+// Helper to extract text and media state from a Baileys message structure, unwrapping ephemeral/view-once containers
+function getMessageTextAndMedia(msg) {
+  let message = msg.message;
+  if (!message) return { text: '', isMedia: false };
+
+  // Unwrap wrappers
+  if (message.ephemeralMessage) message = message.ephemeralMessage.message;
+  if (message.viewOnceMessage) message = message.viewOnceMessage.message;
+  if (message.viewOnceMessageV2) message = message.viewOnceMessageV2.message;
+  if (message.documentWithCaptionMessage) message = message.documentWithCaptionMessage.message;
+  
+  if (!message) return { text: '', isMedia: false };
+
+  const isMedia = !!(message.imageMessage || message.videoMessage || message.documentMessage || message.audioMessage);
+  
+  let text = 
+    message.conversation ||
+    message.extendedTextMessage?.text ||
+    message.imageMessage?.caption ||
+    message.videoMessage?.caption ||
+    message.buttonsResponseMessage?.selectedButtonId ||
+    message.templateButtonReplyMessage?.selectedId ||
+    message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+    message.listResponseMessage?.title ||
+    message.interactiveResponseMessage?.bodyText ||
+    message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+    '';
+
+  if (isMedia && !text) {
+    text = '[Archivo multimedia recibido]';
+  }
+
+  return { text, isMedia };
+}
+
 // Main socket initialization and event loop
 async function connectToWhatsApp() {
   console.log('[WhatsApp Socket] Inicializando socket...');
@@ -205,21 +240,7 @@ async function connectToWhatsApp() {
           const chatId = msg.key.remoteJid.split('@')[0];
           const clienteNombre = msg.pushName || 'Cliente WhatsApp';
 
-          let messageText = '';
-          const isMedia = msg.message?.imageMessage || msg.message?.videoMessage;
-
-          if (isMedia) {
-            messageText = '[Archivo multimedia recibido]';
-          } else if (msg.message?.conversation) {
-            messageText = msg.message.conversation;
-          } else if (msg.message?.extendedTextMessage?.text) {
-            messageText = msg.message.extendedTextMessage.text;
-          } else if (msg.message?.buttonsResponseMessage?.selectedButtonId) {
-            messageText = msg.message.buttonsResponseMessage.selectedButtonId;
-          } else if (msg.message?.listResponseMessage?.title) {
-            messageText = msg.message.listResponseMessage.title;
-          }
-
+          const { text: messageText, isMedia } = getMessageTextAndMedia(msg);
           if (!messageText) continue;
 
           console.log(`[WhatsApp Socket] Mensaje de ${clienteNombre} (${chatId}): "${messageText}"`);
