@@ -21,9 +21,9 @@ if (-not (Test-Path $backendEnv)) {
     }
 }
 
-# 2. Launch Backend in a new window
-Write-Host '[+] Iniciando Servidor de Producción (Express) en el puerto 5000...' -ForegroundColor Green
-Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd whatsapp-backend; npm start' -WindowStyle Normal
+# 2. Launch Backend in a new window with auto-restart loop
+Write-Host '[+] Iniciando Servidor de Producción (Express) con auto-reinicio...' -ForegroundColor Green
+Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd whatsapp-backend; while ($true) { node server.js; Start-Sleep -Seconds 5 }' -WindowStyle Normal
 
 Write-Host '----------------------------------------------' -ForegroundColor Gray
 Write-Host '[✔] El servidor ha sido lanzado en una terminal independiente.' -ForegroundColor Green

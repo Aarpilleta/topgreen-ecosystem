@@ -198,81 +198,85 @@ async function connectToWhatsApp() {
       if (m.type !== 'notify') return;
 
       for (const msg of m.messages) {
-        if (msg.key.fromMe) continue;
-        if (!msg.key.remoteJid || !msg.key.remoteJid.endsWith('@s.whatsapp.net')) continue;
+        try {
+          if (msg.key.fromMe) continue;
+          if (!msg.key.remoteJid || !msg.key.remoteJid.endsWith('@s.whatsapp.net')) continue;
 
-        const chatId = msg.key.remoteJid.split('@')[0];
-        const clienteNombre = msg.pushName || 'Cliente WhatsApp';
+          const chatId = msg.key.remoteJid.split('@')[0];
+          const clienteNombre = msg.pushName || 'Cliente WhatsApp';
 
-        let messageText = '';
-        const isMedia = msg.message?.imageMessage || msg.message?.videoMessage;
+          let messageText = '';
+          const isMedia = msg.message?.imageMessage || msg.message?.videoMessage;
 
-        if (isMedia) {
-          messageText = '[Archivo multimedia recibido]';
-        } else if (msg.message?.conversation) {
-          messageText = msg.message.conversation;
-        } else if (msg.message?.extendedTextMessage?.text) {
-          messageText = msg.message.extendedTextMessage.text;
-        } else if (msg.message?.buttonsResponseMessage?.selectedButtonId) {
-          messageText = msg.message.buttonsResponseMessage.selectedButtonId;
-        } else if (msg.message?.listResponseMessage?.title) {
-          messageText = msg.message.listResponseMessage.title;
-        }
-
-        if (!messageText) continue;
-
-        console.log(`[WhatsApp Socket] Mensaje de ${clienteNombre} (${chatId}): "${messageText}"`);
-
-        // 1. Get or create chat control
-        const chat = await db.checkOrCreateChat(chatId, clienteNombre);
-        let botActivo = chat.bot_activo;
-
-        // 2. Media Handoff Logic (Flow A Paso 3)
-        if (botActivo && isMedia) {
-          console.log(`[Media Handoff] Cliente ${chatId} envió archivo. Activando Handoff.`);
-          await db.toggleBot(chatId, false);
-          await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
-
-          const outside = isOutsideBusinessHours();
-          let transitionText;
-          if (outside) {
-            transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar.\n\nComo estamos fuera de nuestro horario de servicio, te daremos tu cotización a primera hora en cuanto abramos. 🌿\n\n🕒 *Horario de atención:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡Gracias por tu paciencia! 💖";
-          } else {
-            transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
-            scheduleHandoffTimeout(chatId);
+          if (isMedia) {
+            messageText = '[Archivo multimedia recibido]';
+          } else if (msg.message?.conversation) {
+            messageText = msg.message.conversation;
+          } else if (msg.message?.extendedTextMessage?.text) {
+            messageText = msg.message.extendedTextMessage.text;
+          } else if (msg.message?.buttonsResponseMessage?.selectedButtonId) {
+            messageText = msg.message.buttonsResponseMessage.selectedButtonId;
+          } else if (msg.message?.listResponseMessage?.title) {
+            messageText = msg.message.listResponseMessage.title;
           }
-          await db.saveMessage(chatId, 'bot', transitionText);
-          await sendWhatsAppMessage(chatId, transitionText);
-          continue;
-        }
 
-        // 3. Bot Eligibility Verification
-        if (botActivo) {
-          const eligibility = await checkBotEligibility(chatId, messageText);
-          if (!eligibility.shouldAnswer) {
-            console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
+          if (!messageText) continue;
+
+          console.log(`[WhatsApp Socket] Mensaje de ${clienteNombre} (${chatId}): "${messageText}"`);
+
+          // 1. Get or create chat control
+          const chat = await db.checkOrCreateChat(chatId, clienteNombre);
+          let botActivo = chat.bot_activo;
+
+          // 2. Media Handoff Logic (Flow A Paso 3)
+          if (botActivo && isMedia) {
+            console.log(`[Media Handoff] Cliente ${chatId} envió archivo. Activando Handoff.`);
             await db.toggleBot(chatId, false);
-            botActivo = false;
-            
-            const handoffMsg = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
-            await db.saveMessage(chatId, 'bot', handoffMsg);
-            await sendWhatsAppMessage(chatId, handoffMsg);
+            await db.saveMessage(chatId, 'cliente', '📷 [Foto/Video enviado]');
+
+            const outside = isOutsideBusinessHours();
+            let transitionText;
+            if (outside) {
+              transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar.\n\nComo estamos fuera de nuestro horario de servicio, te daremos tu cotización a primera hora en cuanto abramos. 🌿\n\n🕒 *Horario de atención:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡Gracias por tu paciencia! 💖";
+            } else {
+              transitionText = "¡Recibida! Precioso cabello ✨. En este momento se la estoy pasando a nuestra Master Estilista para que revise tu estructura capilar y me dé tu cotización exacta con un regalo especial. Te respondo en menos de 3 minutos. No te vayas ⏱️.";
+              scheduleHandoffTimeout(chatId);
+            }
+            await db.saveMessage(chatId, 'bot', transitionText);
+            await sendWhatsAppMessage(chatId, transitionText);
+            continue;
           }
+
+          // 3. Bot Eligibility Verification
+          if (botActivo) {
+            const eligibility = await checkBotEligibility(chatId, messageText);
+            if (!eligibility.shouldAnswer) {
+              console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
+              await db.toggleBot(chatId, false);
+              botActivo = false;
+              
+              const handoffMsg = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
+              await db.saveMessage(chatId, 'bot', handoffMsg);
+              await sendWhatsAppMessage(chatId, handoffMsg);
+            }
+          }
+
+          // 4. Hybrid Routing Logic
+          if (!botActivo) {
+            console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
+            await db.saveMessage(chatId, 'cliente', messageText);
+            continue;
+          }
+
+          // 5. Process with Gemini Elena
+          console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
+          const reply = await handleConversation(chatId, messageText);
+
+          // Send the reply back to the real user JID
+          await sendWhatsAppMessage(chatId, reply);
+        } catch (msgErr) {
+          console.error(`[WhatsApp Socket] Error al procesar mensaje individual de ${msg.key?.remoteJid || 'desconocido'}:`, msgErr);
         }
-
-        // 4. Hybrid Routing Logic
-        if (!botActivo) {
-          console.log(`[Hybrid Logic] Bot inactivo para ${chatId}. Mensaje registrado para atención humana.`);
-          await db.saveMessage(chatId, 'cliente', messageText);
-          continue;
-        }
-
-        // 5. Process with Gemini Elena
-        console.log(`[Hybrid Logic] Bot activo para ${chatId}. Procesando mensaje con Elena.`);
-        const reply = await handleConversation(chatId, messageText);
-
-        // Send the reply back to the real user JID
-        await sendWhatsAppMessage(chatId, reply);
       }
     });
   } catch (err) {
@@ -700,10 +704,23 @@ app.post('/api/servicios/update', async (req, res) => {
   }
 });
 
+// Global process-level exception handlers to prevent unexpected crashes
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Initialize database and start server
 initDb().then(() => {
   app.listen(port, () => {
     console.log(`TOP GREEN Backend listening at http://localhost:${port}`);
-    connectToWhatsApp();
+    if (process.env.NODE_ENV === 'production' || process.env.CONNECT_WHATSAPP === 'true') {
+      connectToWhatsApp();
+    } else {
+      console.log('[WhatsApp Socket] Ejecución local detectada. No se inicia el socket de WhatsApp para evitar conflictos de sesión con Producción (Render). Puedes forzar la conexión agregando CONNECT_WHATSAPP=true en tu archivo .env.');
+    }
   });
 });

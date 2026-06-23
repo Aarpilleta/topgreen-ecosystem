@@ -305,37 +305,51 @@ async function handleConversation(chatId, userMessage) {
     history: contents.slice(0, -1) // pass history before current message
   });
 
-  let response = await chatSession.sendMessage(userMessage);
-  let functionCalls = response.response.functionCalls();
+  let finalBotResponse;
+  try {
+    let response = await chatSession.sendMessage(userMessage);
+    let functionCalls = response.response.functionCalls();
 
-  while (functionCalls && functionCalls.length > 0) {
-    const call = functionCalls[0];
-    let toolResult;
+    while (functionCalls && functionCalls.length > 0) {
+      const call = functionCalls[0];
+      let toolResult;
 
-    console.log(`Executing tool: ${call.name}`, call.args);
+      console.log(`Executing tool: ${call.name}`, call.args);
 
-    if (call.name === 'tool_check_zone') {
-      toolResult = await dbCheckZone(call.args.colonia_o_cp, chatId);
-    } else if (call.name === 'tool_get_service_details') {
-      toolResult = await dbGetServiceDetails(call.args.servicio_name);
-    } else if (call.name === 'tool_check_availability') {
-      toolResult = await dbCheckAvailability(call.args.servicio_id, call.args.fecha);
-    } else if (call.name === 'tool_hold_appointment') {
-      toolResult = await dbHoldAppointment(call.args.cliente_id || chatId, call.args.estilista_id, call.args.servicio_id, call.args.hora_inicio);
+      if (call.name === 'tool_check_zone') {
+        toolResult = await dbCheckZone(call.args.colonia_o_cp, chatId);
+      } else if (call.name === 'tool_get_service_details') {
+        toolResult = await dbGetServiceDetails(call.args.servicio_name);
+      } else if (call.name === 'tool_check_availability') {
+        toolResult = await dbCheckAvailability(call.args.servicio_id, call.args.fecha);
+      } else if (call.name === 'tool_hold_appointment') {
+        toolResult = await dbHoldAppointment(call.args.cliente_id || chatId, call.args.estilista_id, call.args.servicio_id, call.args.hora_inicio);
+      }
+
+      response = await chatSession.sendMessage([
+        {
+          functionResponse: {
+            name: call.name,
+            response: toolResult
+          }
+        }
+      ]);
+      functionCalls = response.response.functionCalls();
     }
 
-    response = await chatSession.sendMessage([
-      {
-        functionResponse: {
-          name: call.name,
-          response: toolResult
-        }
-      }
-    ]);
-    functionCalls = response.response.functionCalls();
+    finalBotResponse = response.response.text();
+  } catch (apiError) {
+    console.error('[Gemini API Error] Fallo al procesar conversación con IA:', apiError);
+    finalBotResponse = "Disculpa la molestia 🌿. En este momento estoy experimentando un inconveniente técnico para procesar tu solicitud. Un asesor humano continuará tu atención de inmediato. ✨";
+    
+    // Auto-disable bot so a human can intervene immediately and the customer doesn't get repeated errors
+    try {
+      await db.toggleBot(chatId, false);
+      console.log(`[Auto-Handoff] Bot desactivado para el chat ${chatId} debido a error en la API de Gemini.`);
+    } catch (dbErr) {
+      console.error('Error al desactivar el bot tras fallo de Gemini:', dbErr);
+    }
   }
-
-  const finalBotResponse = response.response.text();
 
   // Save bot response to database
   await db.saveMessage(chatId, 'bot', finalBotResponse);

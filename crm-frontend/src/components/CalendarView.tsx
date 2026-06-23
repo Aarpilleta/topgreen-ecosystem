@@ -63,10 +63,28 @@ export default function CalendarView({ citas, estilistas, onUpdateCita, onRefres
     return apptDate === selectedDateStr && appt.estado !== 'cancelada';
   });
 
-  // Working Hours (09:00 to 20:00)
+  // Calculate startHour and endHour dynamically to accommodate any early or late appointments
+  let startHour = 9;
+  let endHour = 20;
+
+  activeAppointments.forEach((appt) => {
+    if (appt.fecha_hora_inicio) {
+      const apptDate = new Date(appt.fecha_hora_inicio);
+      const apptStartHour = apptDate.getHours();
+      if (apptStartHour < startHour) {
+        startHour = apptStartHour;
+      }
+    }
+    if (appt.fecha_hora_fin) {
+      const apptDate = new Date(appt.fecha_hora_fin);
+      const apptEndHour = Math.ceil(apptDate.getHours() + apptDate.getMinutes() / 60);
+      if (apptEndHour > endHour) {
+        endHour = apptEndHour;
+      }
+    }
+  });
+
   const hourHeight = 64; // px per hour
-  const startHour = 9;
-  const endHour = 20;
   const totalHours = endHour - startHour;
   const timeSlots = Array.from({ length: totalHours }).map((_, i) => startHour + i);
 

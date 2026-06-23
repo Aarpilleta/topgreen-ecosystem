@@ -105,6 +105,10 @@ async function initDb() {
           connectionString: connStr,
           ssl: connStr.includes('localhost') || connStr.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
         });
+
+        pool.on('error', (err) => {
+          console.error('Unexpected error on idle PostgreSQL client:', err);
+        });
         
         // Test query
         await pool.query('SELECT NOW()');

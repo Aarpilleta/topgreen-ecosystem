@@ -1317,44 +1317,6 @@
         }
 
         async function loadState() {
-            // Update hoursArray based on selected date (Friday & Saturday: 9:30 to 20:00, other days: 11:00 to 20:00)
-            const [y, m, d] = state.selectedDate.split('-').map(Number);
-            const dateObj = new Date(y, m - 1, d);
-            const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
-            
-            const isFridayOrSaturday = (dayOfWeek === 5 || dayOfWeek === 6);
-            const startHour = isFridayOrSaturday ? 9.5 : 11.0;
-            const endHour = 20.0;
-            
-            hoursArray = [];
-            for (let h = startHour; h < endHour; h += 0.5) {
-                const hh = Math.floor(h);
-                const mm = (h % 1 === 0) ? '00' : '30';
-                hoursArray.push(`${String(hh).padStart(2, '0')}:${mm}`);
-            }
-
-            // Populate lock start hour options dynamically
-            const lockStartSelect = document.getElementById('lock-start-hour');
-            if (lockStartSelect) {
-                const prevVal = lockStartSelect.value;
-                lockStartSelect.innerHTML = '';
-                hoursArray.forEach(hour => {
-                    const opt = document.createElement('option');
-                    opt.value = hour;
-                    opt.innerText = hour;
-                    lockStartSelect.appendChild(opt);
-                });
-                if (hoursArray.includes(prevVal)) {
-                    lockStartSelect.value = prevVal;
-                } else if (hoursArray.length > 0) {
-                    if (hoursArray.includes('12:00')) {
-                        lockStartSelect.value = '12:00';
-                    } else {
-                        lockStartSelect.value = hoursArray[0];
-                    }
-                }
-            }
-
             // Build the array of promises to run in parallel
             const promises = [
                 (!state.stylists || state.stylists.length === 0) ? fetchAPI('/api/estilistas') : Promise.resolve(null),
@@ -1386,6 +1348,65 @@
             nom = overlayed.nom;
             lg = overlayed.lg;
             appointments = overlayed.appointments;
+
+            // Update hoursArray dynamically based on selected date and appointments
+            const [y, m, d] = state.selectedDate.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+            
+            let startHour = 8.0; // Allow starting early at 8:00 AM
+            let endHour = 22.0;   // Allow ending late at 10:00 PM
+
+            if (appointments) {
+                appointments.forEach(app => {
+                    const start = new Date(app.fecha_hora_inicio);
+                    const end = new Date(app.fecha_hora_fin);
+                    try {
+                        const { datePart } = formatMXDate(start);
+                        if (datePart === state.selectedDate) {
+                            const apptStartHour = start.getHours() + start.getMinutes() / 60;
+                            const apptEndHour = end.getHours() + end.getMinutes() / 60;
+                            if (apptStartHour < startHour) {
+                                startHour = Math.floor(apptStartHour * 2) / 2;
+                            }
+                            if (apptEndHour > endHour) {
+                                endHour = Math.ceil(apptEndHour * 2) / 2;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error determining appointment bounds:', e);
+                    }
+                });
+            }
+            
+            hoursArray = [];
+            for (let h = startHour; h < endHour; h += 0.5) {
+                const hh = Math.floor(h);
+                const mm = (h % 1 === 0) ? '00' : '30';
+                hoursArray.push(`${String(hh).padStart(2, '0')}:${mm}`);
+            }
+
+            // Populate lock start hour options dynamically
+            const lockStartSelect = document.getElementById('lock-start-hour');
+            if (lockStartSelect) {
+                const prevVal = lockStartSelect.value;
+                lockStartSelect.innerHTML = '';
+                hoursArray.forEach(hour => {
+                    const opt = document.createElement('option');
+                    opt.value = hour;
+                    opt.innerText = hour;
+                    lockStartSelect.appendChild(opt);
+                });
+                if (hoursArray.includes(prevVal)) {
+                    lockStartSelect.value = prevVal;
+                } else if (hoursArray.length > 0) {
+                    if (hoursArray.includes('12:00')) {
+                        lockStartSelect.value = '12:00';
+                    } else {
+                        lockStartSelect.value = hoursArray[0];
+                    }
+                }
+            }
 
             // Verify if state has actually changed to avoid unnecessary DOM re-renders and scroll resets
             const currentSignature = JSON.stringify({
@@ -2396,7 +2417,7 @@
                 updateLockCostPreview();
             }
 
-            // Dynamically populate product addon select from state.inventory (only retail items)
+            // Dynamically populate product addon select from state.inventory (retail & insumos)
             const selectAddon = document.getElementById('checkout-product-addon');
             if (selectAddon) {
                 const currentAddonVal = selectAddon.value;
@@ -2406,6 +2427,8 @@
                         const item = state.inventory[key];
                         if (item.price !== null) {
                             optionsHtml += `<option value="${key}">${item.name} (+ $${item.price.toFixed(2)})</option>`;
+                        } else {
+                            optionsHtml += `<option value="${key}">${item.name} (Insumo - Consumo)</option>`;
                         }
                     });
                 }
@@ -2669,7 +2692,7 @@
                 let extraCost = 0;
                 let retailComm = 0;
 
-                // Handle Addon Inventory Dynamically
+                // Handle Addon Inventory Dynamically (Retail and Insumos)
                 if (addonKey !== 'none') {
                     const item = state.inventory[addonKey];
                     if (item) {
@@ -2679,9 +2702,9 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ key_name: addonKey, stock: item.stock - 1 })
                             });
-                            extraPrice += item.price;
+                            extraPrice += item.price || 0;
                             extraCost += item.costPerUnit || 0;
-                            retailComm = Math.round((item.price / 1.16) * 0.1);
+                            retailComm = item.price ? Math.round((item.price / 1.16) * 0.1) : 0;
                         } else {
                             throw new Error(`Stock de ${item.name} agotado.`);
                         }
@@ -2930,6 +2953,22 @@
                 
                 button.onclick = () => selectChat(chat);
 
+                // Format time/date
+                let timeDisplay = '';
+                if (chat.ultimo_mensaje_fecha) {
+                    try {
+                        const date = new Date(chat.ultimo_mensaje_fecha);
+                        const today = new Date();
+                        if (date.toDateString() === today.toDateString()) {
+                            timeDisplay = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else {
+                            timeDisplay = date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
                 button.innerHTML = `
                     <div class="w-9 h-9 rounded-full bg-zinc-850 flex items-center justify-center font-bold text-zinc-350 shrink-0">
                         ${chat.nombre_cliente.charAt(0)}
@@ -2937,7 +2976,10 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
                             <span class="font-semibold text-xs text-zinc-200 truncate">${chat.nombre_cliente}</span>
-                            <span class="w-2 h-2 rounded-full ${chat.bot_activo ? 'bg-emerald-500 animate-pulse' : 'bg-purple-500'}" title="${chat.bot_activo ? 'Asistente Elena Activo' : 'Soporte Humano'}"></span>
+                            <div class="flex items-center space-x-1.5 shrink-0">
+                                <span class="text-[9px] text-zinc-500">${timeDisplay}</span>
+                                <span class="w-2.5 h-2.5 rounded-full ${chat.bot_activo ? 'bg-emerald-500 animate-pulse' : 'bg-purple-500'}" title="${chat.bot_activo ? 'Asistente Elena Activo' : 'Soporte Humano'}"></span>
+                            </div>
                         </div>
                         <p class="text-[10px] text-zinc-500 truncate font-mono mt-0.5">${chat.chat_id_whatsapp}</p>
                         <p class="text-xs text-zinc-400 mt-1 truncate italic">${chat.ultimo_mensaje || 'Sin mensajes'}</p>
@@ -3010,7 +3052,19 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = `flex ${isClient ? 'justify-start' : 'justify-end'}`;
 
-                const timeStr = new Date(msg.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                // Format time/date
+                let timeStr = '';
+                try {
+                    const date = new Date(msg.fecha_hora);
+                    const today = new Date();
+                    if (date.toDateString() === today.toDateString()) {
+                        timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        timeStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
 
                 wrapper.innerHTML = `
                     <div class="max-w-[75%] rounded-2xl px-4 py-2.5 shadow-md ${

@@ -383,6 +383,23 @@ export default function Dashboard() {
                 ) : (
                   chats.map((chat) => {
                     const isSelected = selectedChat?.chat_id_whatsapp === chat.chat_id_whatsapp;
+                    
+                    // Format time/date
+                    let timeDisplay = '';
+                    if (chat.ultimo_mensaje_fecha) {
+                      try {
+                        const date = new Date(chat.ultimo_mensaje_fecha);
+                        const today = new Date();
+                        if (date.toDateString() === today.toDateString()) {
+                          timeDisplay = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else {
+                          timeDisplay = date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }
+
                     return (
                       <button
                         key={chat.chat_id_whatsapp}
@@ -393,13 +410,16 @@ export default function Dashboard() {
                             : 'hover:bg-zinc-900/50'
                         }`}
                       >
-                        <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-zinc-300 shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-zinc-350 shrink-0">
                           {chat.nombre_cliente.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-xs text-zinc-200 truncate">{chat.nombre_cliente}</span>
-                            <span className={`w-2 h-2 rounded-full ${chat.bot_activo ? 'bg-emerald-500' : 'bg-purple-500'}`} title={chat.bot_activo ? 'Bot Elena Activo' : 'Soporte Humano'}></span>
+                            <div className="flex items-center space-x-1.5 shrink-0">
+                              <span className="text-[9px] text-zinc-500">{timeDisplay}</span>
+                              <span className={`w-2.5 h-2.5 rounded-full ${chat.bot_activo ? 'bg-emerald-500 animate-pulse' : 'bg-purple-500'}`} title={chat.bot_activo ? 'Bot Elena Activo' : 'Soporte Humano'}></span>
+                            </div>
                           </div>
                           <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{chat.chat_id_whatsapp}</p>
                           <p className="text-xs text-zinc-500 mt-1 truncate italic">
