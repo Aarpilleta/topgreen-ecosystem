@@ -63,8 +63,14 @@ export default function CalendarView({ citas, estilistas, onUpdateCita, onRefres
     return apptDate === selectedDateStr && appt.estado !== 'cancelada';
   });
 
-  // Calculate startHour and endHour dynamically to accommodate any early or late appointments
-  let startHour = 9;
+  // Default bounds based on salon working hours:
+  // Lunes a Jueves y Domingo: 11:00 AM a 8:00 PM (starts at 11)
+  // Viernes y Sábado: 9:30 AM a 8:00 PM (starts at 9)
+  const [y, m, d] = selectedDateStr.split('-').map(Number);
+  const selectedDateObj = new Date(y, m - 1, d);
+  const dayOfWeek = selectedDateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+  
+  let startHour = (dayOfWeek === 5 || dayOfWeek === 6) ? 9 : 11;
   let endHour = 20;
 
   activeAppointments.forEach((appt) => {

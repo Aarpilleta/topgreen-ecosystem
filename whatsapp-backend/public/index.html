@@ -1354,8 +1354,15 @@
             const dateObj = new Date(y, m - 1, d);
             const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
             
-            let startHour = 8.0; // Allow starting early at 8:00 AM
-            let endHour = 22.0;   // Allow ending late at 10:00 PM
+            // Default visual bounds based on salon working hours
+            let startHour, endHour;
+            if (dayOfWeek === 5 || dayOfWeek === 6) { // Viernes y Sábado: 9:30 am a 8:00 pm
+                startHour = 9.5;
+                endHour = 20.0;
+            } else { // Lunes a Jueves, Domingo: 11:00 am a 8:00 pm
+                startHour = 11.0;
+                endHour = 20.0;
+            }
 
             if (appointments) {
                 appointments.forEach(app => {
@@ -1386,25 +1393,31 @@
                 hoursArray.push(`${String(hh).padStart(2, '0')}:${mm}`);
             }
 
-            // Populate lock start hour options dynamically
+            // Populate lock start hour options dynamically with full decoupled range (08:00 to 22:00)
             const lockStartSelect = document.getElementById('lock-start-hour');
             if (lockStartSelect) {
                 const prevVal = lockStartSelect.value;
                 lockStartSelect.innerHTML = '';
-                hoursArray.forEach(hour => {
+                
+                const selectionHours = [];
+                for (let h = 8.0; h <= 22.0; h += 0.5) {
+                    const hh = Math.floor(h);
+                    const mm = (h % 1 === 0) ? '00' : '30';
+                    selectionHours.push(`${String(hh).padStart(2, '0')}:${mm}`);
+                }
+
+                selectionHours.forEach(hour => {
                     const opt = document.createElement('option');
                     opt.value = hour;
                     opt.innerText = hour;
                     lockStartSelect.appendChild(opt);
                 });
-                if (hoursArray.includes(prevVal)) {
+                
+                if (selectionHours.includes(prevVal)) {
                     lockStartSelect.value = prevVal;
-                } else if (hoursArray.length > 0) {
-                    if (hoursArray.includes('12:00')) {
-                        lockStartSelect.value = '12:00';
-                    } else {
-                        lockStartSelect.value = hoursArray[0];
-                    }
+                } else {
+                    const defaultStart = (dayOfWeek === 5 || dayOfWeek === 6) ? '09:30' : '11:00';
+                    lockStartSelect.value = defaultStart;
                 }
             }
 
@@ -2256,20 +2269,22 @@
             }
 
             const sched = getActiveSchedule();
-            const startIdx = hoursArray.indexOf(startHour);
             const durationSlots = Math.round(duration * 2);
             
-            if (startIdx === -1) {
-                triggerToast("La hora de inicio no es válida.", "error");
-                return;
-            }
-
-            // Check if slots are free
+            // Check if slots are free by calculating the time strings
             let free = true;
+            const [startH, startM] = startHour.split(':').map(Number);
+            let currentHourVal = startH + startM / 60;
             for (let i = 0; i < durationSlots; i++) {
-                if (startIdx + i >= hoursArray.length) { continue; }
-                const hr = hoursArray[startIdx + i];
-                if (sched[stylist][hr]) { free = false; break; }
+                const hh = Math.floor(currentHourVal);
+                const mm = (currentHourVal % 1 === 0) ? '00' : '30';
+                const hr = `${String(hh).padStart(2, '0')}:${mm}`;
+                
+                if (sched[stylist] && sched[stylist][hr]) {
+                    free = false;
+                    break;
+                }
+                currentHourVal += 0.5;
             }
 
             if (!free) {
