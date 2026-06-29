@@ -311,6 +311,21 @@ async function connectToWhatsApp() {
                 const sender = messageText.toLowerCase().includes('elena') || messageText.toLowerCase().includes('top green') ? 'bot' : 'humano';
                 await db.checkOrCreateChat(chatId, msg.pushName || 'Cliente WhatsApp');
                 await db.saveMessage(chatId, sender, messageText);
+
+                // If this is a welcome template or ad, reactivate the bot so it will handle client replies
+                const isTemplateOrAd = /nanoplastia/i.test(messageText) || 
+                                       /ipl/i.test(messageText) || 
+                                       /micropigmentacion|micropigmentación/i.test(messageText) ||
+                                       /promocion|promoción/i.test(messageText) ||
+                                       /descuento/i.test(messageText) ||
+                                       /anuncio/i.test(messageText) ||
+                                       /bienvenida|bienvenido/i.test(messageText) ||
+                                       /gracias por escribir/i.test(messageText) ||
+                                       /interés|interes/i.test(messageText);
+                if (isTemplateOrAd) {
+                  console.log(`[Reactivation] Reactivando bot para ${chatId} debido a plantilla saliente.`);
+                  await db.toggleBot(chatId, true);
+                }
               }
             }
             continue;
@@ -328,7 +343,27 @@ async function connectToWhatsApp() {
           const chat = await db.checkOrCreateChat(chatId, clienteNombre);
           let botActivo = chat.bot_activo;
 
-          // 2. Media Handoff Logic (Flow A Paso 3)
+          // 2. Eligibility & Auto-Reactivation Check
+          const eligibility = await checkBotEligibility(chatId, messageText);
+          if (eligibility.shouldAnswer) {
+            if (!botActivo) {
+              console.log(`[Reactivation] Reactivando bot para ${chatId} porque califica para responder.`);
+              await db.toggleBot(chatId, true);
+              botActivo = true;
+            }
+          } else {
+            if (botActivo) {
+              console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
+              await db.toggleBot(chatId, false);
+              botActivo = false;
+              
+              const handoffMsg = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
+              await db.saveMessage(chatId, 'bot', handoffMsg);
+              await sendWhatsAppMessage(chatId, handoffMsg);
+            }
+          }
+
+          // 3. Media Handoff Logic (Flow A Paso 3)
           if (botActivo && isMedia) {
             console.log(`[Media Handoff] Cliente ${chatId} envió archivo. Activando Handoff.`);
             await db.toggleBot(chatId, false);
@@ -345,20 +380,6 @@ async function connectToWhatsApp() {
             await db.saveMessage(chatId, 'bot', transitionText);
             await sendWhatsAppMessage(chatId, transitionText);
             continue;
-          }
-
-          // 3. Bot Eligibility Verification
-          if (botActivo) {
-            const eligibility = await checkBotEligibility(chatId, messageText);
-            if (!eligibility.shouldAnswer) {
-              console.log(`[Eligibility] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
-              await db.toggleBot(chatId, false);
-              botActivo = false;
-              
-              const handoffMsg = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
-              await db.saveMessage(chatId, 'bot', handoffMsg);
-              await sendWhatsAppMessage(chatId, handoffMsg);
-            }
           }
 
           // 4. Hybrid Routing Logic
@@ -404,6 +425,28 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
     const isSimulatedMedia = message.startsWith('[IMAGEN]') || message.startsWith('[VIDEO]') || message.startsWith('[FOTO]');
 
+    const eligibility = await checkBotEligibility(chatId, message);
+    if (eligibility.shouldAnswer) {
+      if (!botActivo) {
+        console.log(`[Reactivation Sim] Reactivando bot para ${chatId} en el simulador.`);
+        await db.toggleBot(chatId, true);
+        botActivo = true;
+      }
+    } else {
+      if (botActivo) {
+        console.log(`[Eligibility Sim] Cliente no elegible en simulador para ${chatId}. Desactivando bot.`);
+        await db.toggleBot(chatId, false);
+        botActivo = false;
+        
+        const fallback = "Gracias por tu mensaje. 🌿 En este momento no podemos responder de forma directa, pero lo haremos lo antes posible. ✨\n\n🕒 *Horario de atención del salón:*\n📅 Lunes a Jueves — 11:00 am a 8:00 pm\n📅 Viernes y Sábado — 9:30 am a 8:00 pm\n📅 Domingo — 11:00 am a 8:00 pm\n\n¡En un momento un asesor continuará tu atención! 💖";
+        await db.saveMessage(chatId, 'bot', fallback);
+        return res.json({
+          status: 'fallback_sent',
+          reply: fallback
+        });
+      }
+    }
+
     if (botActivo && isSimulatedMedia) {
       console.log(`[Media Handoff Sim] Cliente ${chatId} envió archivo simulado. Activando Handoff.`);
       await db.toggleBot(chatId, false);
@@ -418,15 +461,6 @@ app.post('/webhook/whatsapp', async (req, res) => {
         status: 'handoff_triggered',
         reply: transitionText
       });
-    }
-
-    if (botActivo) {
-      const eligibility = await checkBotEligibility(chatId, message);
-      if (!eligibility.shouldAnswer) {
-        console.log(`[Eligibility Sim] Cliente recurrente activo y sin anuncio para ${chatId}. Desactivando bot.`);
-        await db.toggleBot(chatId, false);
-        botActivo = false;
-      }
     }
 
     if (!botActivo) {
