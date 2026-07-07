@@ -3339,8 +3339,9 @@
             }
         }, 1000);
 
-        // Polling loop for real-time CRM updates
-        setInterval(() => {
+        // Polling loop for real-time CRM updates (throttled and disabled when backgrounded)
+        function triggerRealtimeUpdate() {
+            if (document.hidden) return;
             if (state.activeTab === 'dashboard') {
                 loadState();
             } else if (state.activeTab === 'whatsapp') {
@@ -3349,7 +3350,16 @@
                     loadChatMessages(state.selectedChat.chat_id_whatsapp);
                 }
             }
-        }, 4000);
+        }
+
+        setInterval(triggerRealtimeUpdate, 15000);
+
+        // Immediate refresh when tab becomes visible again
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                triggerRealtimeUpdate();
+            }
+        });
 
         function initCustomerAutocomplete() {
             const nameInput = document.getElementById('edit-customer-name');
@@ -3527,7 +3537,9 @@
         }
 
         // Poll WA status every 5s in background to update header button
+        // Poll WA status every 15s in background to update header button, skip when backgrounded
         setInterval(async () => {
+            if (document.hidden) return;
             try {
                 const res = await fetch('/api/whatsapp/status');
                 const data = await res.json();
@@ -3541,7 +3553,7 @@
                     connBtn.classList.add('hidden');
                 }
             } catch(e) {}
-        }, 5000);
+        }, 15000);
     </script>
 </div>
 </body>

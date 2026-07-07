@@ -291,7 +291,7 @@ INSERT INTO estilistas (nombre, especialidades, color, activo) VALUES
 
 ('Fran', ARRAY[
   'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero'
-], '#854d0e', true)
+], '#854d0e', true);
 
 -- Insert Inventario
 INSERT INTO inventario (key_name, nombre, stock, min, cost_per_unit, price, item_type) VALUES
@@ -409,7 +409,7 @@ INSERT INTO inventario (key_name, nombre, stock, min, cost_per_unit, price, item
   ('decolorantes_decolorante_wella', '[Decolorantes] Decolorante wella', 1, 1, 0.00, NULL, 'insumo'),
   ('decolorantes_decolorante_blond_aturdio_8', '[Decolorantes] Decolorante blond aturdio 8', 1, 1, 0.00, NULL, 'insumo'),
   ('decolorantes_decolorante_blond_studio_9', '[Decolorantes] Decolorante blond studio 9', 2, 1, 0.00, NULL, 'insumo'),
-  ('decolorantes_decolorante_blond_studio_7', '[Decolorantes] Decolorante blond studio 7', 0, 1, 0.00, NULL, 'insumo');
+  ('decolorantes_decolorante_blond_studio_7', '[Decolorantes] Decolorante blond studio 7', 0, 1, 0.00, NULL, 'insumo')
 ON CONFLICT (key_name) DO UPDATE SET stock = EXCLUDED.stock;
 
 

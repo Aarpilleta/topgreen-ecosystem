@@ -114,13 +114,20 @@ async function initDb() {
         await pool.query('SELECT NOW()');
         console.log('PostgreSQL database connected successfully. Using SQL storage.');
 
-        // Initialize whatsapp_auth table if not exists
+        // Initialize whatsapp_auth table if not exists (using UNLOGGED to prevent WAL replication bloat)
         await pool.query(`
-          CREATE TABLE IF NOT EXISTS whatsapp_auth (
+          CREATE UNLOGGED TABLE IF NOT EXISTS whatsapp_auth (
             key VARCHAR(255) PRIMARY KEY,
             value TEXT
           )
         `);
+
+        // Ensure the table is UNLOGGED if it was previously created as logged
+        try {
+          await pool.query('ALTER TABLE whatsapp_auth SET UNLOGGED');
+        } catch (alterErr) {
+          console.warn('[DB] Could not set whatsapp_auth table to UNLOGGED:', alterErr.message);
+        }
 
         // Migration: add propina column to nomina table if not exists
         await pool.query(`
@@ -752,7 +759,7 @@ const db = {
   // 7. System Logs (Ledger)
   async getSystemLogs() {
     if (!useFallback) {
-      const res = await pool.query('SELECT time, username, txt FROM logs_sistema ORDER BY id DESC');
+      const res = await pool.query('SELECT time, username, txt FROM logs_sistema ORDER BY id DESC LIMIT 50');
       return res.rows;
     } else {
       const data = loadFallback();
