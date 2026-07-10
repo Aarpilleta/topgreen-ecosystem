@@ -808,20 +808,8 @@ app.get('/api/estilistas', async (req, res) => {
   }
 });
 
-// Admin: force-update Laura specialties to include all 4 service groups
-app.get('/api/admin/fix-laura', async (req, res) => {
-  try {
-    await pool.query(`UPDATE estilistas SET especialidades = ARRAY['Uñas','Lifting','Cortes dama o niña','Cortes caballero o niño','Contorno caballero','Corte fleco','Barba caballero','Efectos de color','Tinte completo','Retoque de tinte','Matiz','Balayage','Babylight','Luces','Extracción de color','Base permanente'] WHERE nombre = 'Laura'`);
-    const result = await pool.query("SELECT especialidades FROM estilistas WHERE nombre = 'Laura'");
-    res.json({ ok: true, especialidades: result.rows[0]?.especialidades });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Get list of services
 app.get('/api/servicios', async (req, res) => {
-
   try {
     const services = await db.getServices();
     res.json(services);
