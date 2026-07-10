@@ -621,9 +621,14 @@
                                     </div>
                                     <!-- Descuento especial Tony -->
                                     <label class="flex items-center gap-2 mt-2 cursor-pointer">
-                                        <input type="checkbox" id="checkout-tony-discount" class="rounded accent-emerald-500" onchange="validateCheckoutSubmitButton()">
+                                        <input type="checkbox" id="checkout-tony-discount" class="rounded accent-emerald-500" onchange="handleTonyDiscountChange()">
                                         <span class="text-[9px] uppercase font-mono text-zinc-400">🎖️ Descuento Especial Tony <span class="text-zinc-600">(comisión s/ precio normal)</span></span>
                                     </label>
+                                    <div id="checkout-tony-discount-fields" class="hidden mt-2">
+                                        <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Monto a cobrar con descuento ($)</label>
+                                        <input type="number" id="checkout-tony-discount-amount" min="0" step="1" value="" oninput="handleTonyDiscountAmountChange()" class="w-full bg-zinc-950 border border-amber-700/50 rounded p-1.5 text-xs text-amber-300 focus:outline-none focus:border-amber-500 font-mono font-bold" placeholder="Ej. 890">
+                                        <p id="checkout-tony-discount-preview" class="text-[9px] text-zinc-500 mt-1 font-mono"></p>
+                                    </div>
                                 </div>
                                 <p id="checkout-status-text" class="text-[10px] text-zinc-550 font-medium mt-1">Ninguna transacción en cola.</p>
                             </div>
@@ -2640,6 +2645,45 @@
             validateCheckoutSubmitButton();
         }
 
+        function handleTonyDiscountChange() {
+            const checked = document.getElementById('checkout-tony-discount').checked;
+            const fields = document.getElementById('checkout-tony-discount-fields');
+            if (fields) fields.classList.toggle('hidden', !checked);
+            if (!checked) {
+                // Restore original price when unchecked
+                const target = document.getElementById('checkout-appointment-select').value;
+                if (target !== 'direct') {
+                    const [st, hr] = target.split('|');
+                    const app = getActiveSchedule()[st]?.[hr];
+                    if (app) {
+                        document.getElementById('checkout-amount-display').value = app.cost.toLocaleString('es-MX', {minimumFractionDigits: 2});
+                        document.getElementById('checkout-tony-discount-preview').innerText = '';
+                    }
+                }
+            }
+            validateCheckoutSubmitButton();
+        }
+
+        function handleTonyDiscountAmountChange() {
+            const discountedAmt = parseFloat(document.getElementById('checkout-tony-discount-amount').value) || 0;
+            const target = document.getElementById('checkout-appointment-select').value;
+            let originalPrice = 0;
+            if (target !== 'direct') {
+                const [st, hr] = target.split('|');
+                const app = getActiveSchedule()[st]?.[hr];
+                if (app) originalPrice = app.cost;
+            }
+            // Update the amount display to the discounted value
+            document.getElementById('checkout-amount-display').value = discountedAmt.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            // Show preview
+            const preview = document.getElementById('checkout-tony-discount-preview');
+            if (preview && originalPrice > 0 && discountedAmt > 0) {
+                const diff = originalPrice - discountedAmt;
+                preview.innerText = `Precio original: $${originalPrice} → Descuento: $${diff} → Comisión sobre $${originalPrice}`;
+            }
+            validateCheckoutSubmitButton();
+        }
+
         function validateCheckoutSubmitButton() {
             const target = document.getElementById('checkout-appointment-select').value;
             const paymentMethod = document.getElementById('checkout-payment-method').value;
@@ -2905,6 +2949,9 @@
                 const splitCard = document.getElementById('checkout-split-card'); if (splitCard) splitCard.value = "0";
                 const splitCash = document.getElementById('checkout-split-cash'); if (splitCash) splitCash.value = "0";
                 const tonyChk = document.getElementById('checkout-tony-discount'); if (tonyChk) tonyChk.checked = false;
+                const tonyAmt = document.getElementById('checkout-tony-discount-amount'); if (tonyAmt) tonyAmt.value = '';
+                const tonyFields = document.getElementById('checkout-tony-discount-fields'); if (tonyFields) tonyFields.classList.add('hidden');
+                const tonyPreview = document.getElementById('checkout-tony-discount-preview'); if (tonyPreview) tonyPreview.innerText = '';
                 document.getElementById('checkout-tip').value = "0";
                 document.getElementById('checkout-insumos-container').classList.add('hidden');
                 const splitFields = document.getElementById('checkout-split-fields'); if (splitFields) splitFields.classList.add('hidden');
