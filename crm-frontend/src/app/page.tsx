@@ -51,11 +51,12 @@ interface Estilista {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'chats' | 'calendar'>('chats');
+  const [activeTab, setActiveTab] = useState<'chats' | 'calendar'>('calendar');
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [estilistas, setEstilistas] = useState<Estilista[]>([]);
+  const [servicios, setServicios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [waStatus, setWaStatus] = useState<'connecting' | 'qr' | 'connected'>('connecting');
@@ -74,10 +75,11 @@ export default function Dashboard() {
   // Fetch all necessary data
   const fetchData = async () => {
     try {
-      const [chatsRes, citasRes, estilistasRes, statusRes] = await Promise.all([
+      const [chatsRes, citasRes, estilistasRes, serviciosRes, statusRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/chats`),
         fetch(`${BACKEND_URL}/api/citas`),
         fetch(`${BACKEND_URL}/api/estilistas`),
+        fetch(`${BACKEND_URL}/api/servicios`),
         fetch(`${BACKEND_URL}/api/whatsapp/status`)
       ]);
 
@@ -93,6 +95,7 @@ export default function Dashboard() {
 
       if (citasRes.ok) setCitas(await citasRes.json());
       if (estilistasRes.ok) setEstilistas(await estilistasRes.json());
+      if (serviciosRes.ok) setServicios(await serviciosRes.json());
       
       if (statusRes.ok) {
         const statusData = await statusRes.json();
@@ -154,10 +157,10 @@ export default function Dashboard() {
     }
   };
 
-  // Update appointment status
-  const handleUpdateCita = async (citaId: number, updateData: { estado?: string; link_comprobante?: string }) => {
+  // Update appointment general details or status
+  const handleUpdateCita = async (citaId: number, updateData: any) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/citas/${citaId}/update-status`, {
+      const res = await fetch(`${BACKEND_URL}/api/citas/${citaId}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
@@ -487,6 +490,8 @@ export default function Dashboard() {
             <CalendarView 
               citas={citas} 
               estilistas={estilistas} 
+              servicios={servicios}
+              chats={chats}
               onUpdateCita={handleUpdateCita} 
               onRefresh={fetchData} 
             />

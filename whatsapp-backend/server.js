@@ -696,14 +696,100 @@ app.post('/api/citas/:id/update-status', async (req, res) => {
   }
 });
 
-// Update appointment details generally
+// Update appointment details generally and calculate commission/payroll if checked out
 app.post('/api/citas/:id/update', async (req, res) => {
   const { id } = req.params;
   try {
+    // 1. Get original appointment to check state change
+    const oldCitaList = await db.getAppointments();
+    const oldCita = oldCitaList.find(c => c.id === Number(id));
+
     const cita = await db.updateAppointment(id, req.body);
     if (!cita) {
       return res.status(404).json({ error: 'Cita no encontrada.' });
     }
+
+    // 2. If it was confirmed/checkout completed now (was not confirmada before, or updated checkout fields)
+    if (cita.estado === 'confirmada' && req.body.estado === 'confirmada') {
+      // Calculate commission
+      let basePrice = Number(cita.precio_cobrado !== null ? cita.precio_cobrado : cita.precio_fijo);
+      const originalPrice = Number(cita.precio_fijo);
+
+      // If Descuento Especial Tony is active, commission is paid on 100% of list price
+      if (cita.descuento_especial) {
+        basePrice = originalPrice;
+      }
+
+      // Deduct dye supplies if any
+      const tinteTubos = Number(cita.insumo_tinte_tubos || 0);
+      const tapaBella = Number(cita.insumo_tinte_tapa_bella || 0);
+      const tapaLoreal = Number(cita.insumo_tinte_tapa_loreal || 0);
+      const precioTubo = Number(cita.insumo_tinte_precio_tubo || 220.00);
+      const precioBella = Number(cita.insumo_tinte_precio_bella || 50.00);
+      const precioLoreal = Number(cita.insumo_tinte_precio_loreal || 60.00);
+
+      const productCost = (tinteTubos * precioTubo) + (tapaBella * precioBella) + (tapaLoreal * precioLoreal);
+      const netBase = Math.max(0, basePrice - productCost);
+
+      // Determine commission percentage based on service name
+      const serviceName = cita.servicio_nombre || 'Servicio';
+      const normSrvName = serviceName.toLowerCase();
+      let percentage = 0.35; // Default 35% commission
+
+      if (normSrvName.includes('uña') || normSrvName.includes('man-ped') || normSrvName.includes('gelish') || normSrvName.includes('manicura') || normSrvName.includes('pedicura')) {
+        percentage = 0.45; // Nails 45%
+      } else if (normSrvName.includes('pestaña') || normSrvName.includes('corte')) {
+        percentage = 0.40; // Lash & cuts 40%
+      } else if (normSrvName.includes('lifting') || normSrvName.includes('maquillaje') || normSrvName.includes('microblading') || normSrvName.includes('micropigmentación')) {
+        percentage = 0.30; // Micro/makeup 30%
+      }
+
+      const commission = Math.round(netBase * percentage);
+
+      // Save to inventory updates if tinte was registered and fallback has keys
+      if (normSrvName.includes('tinte') || normSrvName.includes('color') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight')) {
+        // Find dye stock and deduct
+        const inv = await db.getInventory();
+        const dyeItem = inv.find(i => i.key_name === 'jade_tinte');
+        if (dyeItem && tinteTubos > 0) {
+          // 1 tube = 60g approx (just deduct proportional stock if they want)
+          const gramsToDeduct = tinteTubos * 60;
+          await db.updateInventoryItem('jade_tinte', Math.max(0, dyeItem.stock - gramsToDeduct));
+        }
+      }
+
+      // Add/Replace payroll item
+      const payrollList = await db.getPayroll();
+      const existingPayroll = payrollList.find(n => n.cita_id === Number(id));
+
+      const paymentMethod = (cita.pago_tarjeta > 0 && cita.pago_efectivo > 0) 
+        ? `Dividido: Tarjeta $${cita.pago_tarjeta} / Efectivo $${cita.pago_efectivo}`
+        : (cita.pago_tarjeta > 0 ? 'Tarjeta' : 'Efectivo');
+
+      const payrollItem = {
+        stylist: cita.estilista_nombre,
+        service: `${cita.servicio_nombre} (${paymentMethod})`,
+        amount: Number(cita.precio_cobrado !== null ? cita.precio_cobrado : cita.precio_fijo),
+        commission: commission,
+        type: 'checkout',
+        date: new Date().toISOString(),
+        cita_id: Number(id),
+        propina: 0
+      };
+
+      if (existingPayroll) {
+        // If PostgreSQL database is in use, delete old and insert new, or update fallbacks
+        if (!db.isFallback()) {
+          await pool.query('DELETE FROM nomina WHERE cita_id = $1', [id]);
+        } else {
+          const data = loadFallback();
+          data.nomina = data.nomina.filter(n => n.cita_id !== Number(id));
+          saveFallback(data);
+        }
+      }
+      await db.addPayrollItem(payrollItem);
+    }
+
     res.json(cita);
   } catch (error) {
     console.error('Error al actualizar cita:', error);

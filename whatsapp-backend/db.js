@@ -35,7 +35,11 @@ const initialData = {
     ], color: '#ec4899', activo: true },
     { id: 5, nombre: 'Cande', especialidades: ['Uñas'], color: '#f43f5e', activo: true },
     { id: 6, nombre: 'Judith', especialidades: ['Uñas'], color: '#f59e0b', activo: true },
-    { id: 7, nombre: 'Laura', especialidades: ['Uñas', 'Lifting'], color: '#14b8a6', activo: true },
+    { id: 7, nombre: 'Laura', especialidades: [
+      'Uñas', 'Lifting',
+      'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+      'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente'
+    ], color: '#c084fc', activo: true },
     { id: 8, nombre: 'Lizbeth', especialidades: ['Microblading', 'Micropigmentación'], color: '#d97706', activo: true },
     { id: 9, nombre: 'Fran', especialidades: ['Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero'], color: '#6366f1', activo: true },
     { id: 10, nombre: 'Tony', especialidades: [
@@ -134,6 +138,20 @@ async function initDb() {
           ALTER TABLE nomina ADD COLUMN IF NOT EXISTS propina NUMERIC(10, 2) DEFAULT 0.0;
         `);
 
+        // Migration: add payment split, special discount, and dye supplies columns to citas table
+        await pool.query(`
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS pago_tarjeta NUMERIC(10, 2) DEFAULT 0.0;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS pago_efectivo NUMERIC(10, 2) DEFAULT 0.0;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS descuento_especial BOOLEAN DEFAULT false;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS insumo_tinte_tubos INTEGER DEFAULT 0;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS insumo_tinte_tapa_bella INTEGER DEFAULT 0;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS insumo_tinte_tapa_loreal INTEGER DEFAULT 0;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS insumo_tinte_precio_tubo NUMERIC(10, 2) DEFAULT 220.00;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS insumo_tinte_precio_bella NUMERIC(10, 2) DEFAULT 50.00;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS insumo_tinte_precio_loreal NUMERIC(10, 2) DEFAULT 60.00;
+          ALTER TABLE citas ADD COLUMN IF NOT EXISTS precio_cobrado NUMERIC(10, 2) DEFAULT NULL;
+        `);
+
         // Update stylist colors to match new preferences
         try {
           await pool.query("UPDATE estilistas SET color = '#fbbf24' WHERE nombre = 'Pili'");
@@ -146,6 +164,13 @@ async function initDb() {
           await pool.query("UPDATE estilistas SET color = '#854d0e' WHERE nombre = 'Fran'");
           await pool.query("UPDATE estilistas SET color = '#fb923c' WHERE nombre = 'Tony'");
           
+          // Update specialties for Laura
+          await pool.query(`UPDATE estilistas SET especialidades = ARRAY[
+            'Uñas', 'Lifting',
+            'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
+            'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente'
+          ] WHERE nombre = 'Laura'`);
+
           // Update specialties for Majo (nails, lashes, lifting, facials, cuts, color)
           await pool.query(`UPDATE estilistas SET especialidades = ARRAY[
             'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
@@ -412,7 +437,17 @@ const db = {
           c.fecha_hora_inicio,
           c.fecha_hora_fin,
           c.estado,
-          c.link_comprobante
+          c.link_comprobante,
+          c.pago_tarjeta,
+          c.pago_efectivo,
+          c.descuento_especial,
+          c.insumo_tinte_tubos,
+          c.insumo_tinte_tapa_bella,
+          c.insumo_tinte_tapa_loreal,
+          c.insumo_tinte_precio_tubo,
+          c.insumo_tinte_precio_bella,
+          c.insumo_tinte_precio_loreal,
+          c.precio_cobrado
         FROM citas c
         LEFT JOIN control_chats cc ON c.cliente_id = cc.chat_id_whatsapp
         LEFT JOIN estilistas e ON c.estilista_id = e.id
@@ -438,7 +473,17 @@ const db = {
           fecha_hora_inicio: cita.fecha_hora_inicio,
           fecha_hora_fin: cita.fecha_hora_fin,
           estado: cita.estado,
-          link_comprobante: cita.link_comprobante
+          link_comprobante: cita.link_comprobante,
+          pago_tarjeta: cita.pago_tarjeta || 0,
+          pago_efectivo: cita.pago_efectivo || 0,
+          descuento_especial: !!cita.descuento_especial,
+          insumo_tinte_tubos: cita.insumo_tinte_tubos || 0,
+          insumo_tinte_tapa_bella: cita.insumo_tinte_tapa_bella || 0,
+          insumo_tinte_tapa_loreal: cita.insumo_tinte_tapa_loreal || 0,
+          insumo_tinte_precio_tubo: cita.insumo_tinte_precio_tubo || 220.00,
+          insumo_tinte_precio_bella: cita.insumo_tinte_precio_bella || 50.00,
+          insumo_tinte_precio_loreal: cita.insumo_tinte_precio_loreal || 60.00,
+          precio_cobrado: cita.precio_cobrado !== undefined ? cita.precio_cobrado : null
         };
       }).sort((a, b) => new Date(a.fecha_hora_inicio) - new Date(b.fecha_hora_inicio));
     }
@@ -621,6 +666,66 @@ const db = {
         }
       }
 
+      if (updateFields.pago_tarjeta !== undefined) {
+        query += `pago_tarjeta = $${paramIndex}, `;
+        params.push(Number(updateFields.pago_tarjeta));
+        paramIndex++;
+      }
+
+      if (updateFields.pago_efectivo !== undefined) {
+        query += `pago_efectivo = $${paramIndex}, `;
+        params.push(Number(updateFields.pago_efectivo));
+        paramIndex++;
+      }
+
+      if (updateFields.descuento_especial !== undefined) {
+        query += `descuento_especial = $${paramIndex}, `;
+        params.push(!!updateFields.descuento_especial);
+        paramIndex++;
+      }
+
+      if (updateFields.insumo_tinte_tubos !== undefined) {
+        query += `insumo_tinte_tubos = $${paramIndex}, `;
+        params.push(Number(updateFields.insumo_tinte_tubos));
+        paramIndex++;
+      }
+
+      if (updateFields.insumo_tinte_tapa_bella !== undefined) {
+        query += `insumo_tinte_tapa_bella = $${paramIndex}, `;
+        params.push(Number(updateFields.insumo_tinte_tapa_bella));
+        paramIndex++;
+      }
+
+      if (updateFields.insumo_tinte_tapa_loreal !== undefined) {
+        query += `insumo_tinte_tapa_loreal = $${paramIndex}, `;
+        params.push(Number(updateFields.insumo_tinte_tapa_loreal));
+        paramIndex++;
+      }
+
+      if (updateFields.insumo_tinte_precio_tubo !== undefined) {
+        query += `insumo_tinte_precio_tubo = $${paramIndex}, `;
+        params.push(Number(updateFields.insumo_tinte_precio_tubo));
+        paramIndex++;
+      }
+
+      if (updateFields.insumo_tinte_precio_bella !== undefined) {
+        query += `insumo_tinte_precio_bella = $${paramIndex}, `;
+        params.push(Number(updateFields.insumo_tinte_precio_bella));
+        paramIndex++;
+      }
+
+      if (updateFields.insumo_tinte_precio_loreal !== undefined) {
+        query += `insumo_tinte_precio_loreal = $${paramIndex}, `;
+        params.push(Number(updateFields.insumo_tinte_precio_loreal));
+        paramIndex++;
+      }
+
+      if (updateFields.precio_cobrado !== undefined) {
+        query += `precio_cobrado = $${paramIndex}, `;
+        params.push(updateFields.precio_cobrado !== null ? Number(updateFields.precio_cobrado) : null);
+        paramIndex++;
+      }
+
       if (params.length === 0) {
         const current = await pool.query('SELECT * FROM citas WHERE id = $1', [id]);
         return current.rows[0] || null;
@@ -692,6 +797,17 @@ const db = {
           }
           cita.fecha_hora_fin = new Date(new Date(cita.fecha_hora_inicio).getTime() + durationHours * 60 * 60000).toISOString();
         }
+
+        if (updateFields.pago_tarjeta !== undefined) cita.pago_tarjeta = Number(updateFields.pago_tarjeta);
+        if (updateFields.pago_efectivo !== undefined) cita.pago_efectivo = Number(updateFields.pago_efectivo);
+        if (updateFields.descuento_especial !== undefined) cita.descuento_especial = !!updateFields.descuento_especial;
+        if (updateFields.insumo_tinte_tubos !== undefined) cita.insumo_tinte_tubos = Number(updateFields.insumo_tinte_tubos);
+        if (updateFields.insumo_tinte_tapa_bella !== undefined) cita.insumo_tinte_tapa_bella = Number(updateFields.insumo_tinte_tapa_bella);
+        if (updateFields.insumo_tinte_tapa_loreal !== undefined) cita.insumo_tinte_tapa_loreal = Number(updateFields.insumo_tinte_tapa_loreal);
+        if (updateFields.insumo_tinte_precio_tubo !== undefined) cita.insumo_tinte_precio_tubo = Number(updateFields.insumo_tinte_precio_tubo);
+        if (updateFields.insumo_tinte_precio_bella !== undefined) cita.insumo_tinte_precio_bella = Number(updateFields.insumo_tinte_precio_bella);
+        if (updateFields.insumo_tinte_precio_loreal !== undefined) cita.insumo_tinte_precio_loreal = Number(updateFields.insumo_tinte_precio_loreal);
+        if (updateFields.precio_cobrado !== undefined) cita.precio_cobrado = updateFields.precio_cobrado !== null ? Number(updateFields.precio_cobrado) : null;
 
         saveFallback(data);
         return cita;
@@ -824,10 +940,23 @@ const db = {
       }
       
       const res = await pool.query(
-        `INSERT INTO citas (cliente_id, estilista_id, servicio_id, fecha_hora_inicio, fecha_hora_fin, estado)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO citas (
+          cliente_id, estilista_id, servicio_id, fecha_hora_inicio, fecha_hora_fin, estado,
+          pago_tarjeta, pago_efectivo, descuento_especial,
+          insumo_tinte_tubos, insumo_tinte_tapa_bella, insumo_tinte_tapa_loreal,
+          insumo_tinte_precio_tubo, insumo_tinte_precio_bella, insumo_tinte_precio_loreal,
+          precio_cobrado
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          RETURNING *`,
-        [clientVal, styId, svcId, startTime.toISOString(), endTime.toISOString(), app.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente']
+        [
+          clientVal, styId, svcId, startTime.toISOString(), endTime.toISOString(),
+          app.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente',
+          Number(app.pago_tarjeta || 0), Number(app.pago_efectivo || 0), !!app.descuento_especial,
+          Number(app.insumo_tinte_tubos || 0), Number(app.insumo_tinte_tapa_bella || 0), Number(app.insumo_tinte_tapa_loreal || 0),
+          Number(app.insumo_tinte_precio_tubo || 220.00), Number(app.insumo_tinte_precio_bella || 50.00), Number(app.insumo_tinte_precio_loreal || 60.00),
+          app.precio_cobrado !== undefined && app.precio_cobrado !== null ? Number(app.precio_cobrado) : null
+        ]
       );
       return res.rows[0];
     } else {
@@ -866,7 +995,17 @@ const db = {
         fecha_hora_inicio: startStr,
         fecha_hora_fin: endStr,
         estado: app.status === 'Cobrado' ? 'confirmada' : 'anticipo_pendiente',
-        link_comprobante: app.formula || null
+        link_comprobante: app.formula || null,
+        pago_tarjeta: Number(app.pago_tarjeta || 0),
+        pago_efectivo: Number(app.pago_efectivo || 0),
+        descuento_especial: !!app.descuento_especial,
+        insumo_tinte_tubos: Number(app.insumo_tinte_tubos || 0),
+        insumo_tinte_tapa_bella: Number(app.insumo_tinte_tapa_bella || 0),
+        insumo_tinte_tapa_loreal: Number(app.insumo_tinte_tapa_loreal || 0),
+        insumo_tinte_precio_tubo: Number(app.insumo_tinte_precio_tubo || 220.00),
+        insumo_tinte_precio_bella: Number(app.insumo_tinte_precio_bella || 50.00),
+        insumo_tinte_precio_loreal: Number(app.insumo_tinte_precio_loreal || 60.00),
+        precio_cobrado: app.precio_cobrado !== undefined && app.precio_cobrado !== null ? Number(app.precio_cobrado) : null
       };
       
       data.citas.push(newCita);

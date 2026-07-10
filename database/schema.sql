@@ -45,7 +45,17 @@ CREATE TABLE citas (
     fecha_hora_inicio TIMESTAMP WITH TIME ZONE NOT NULL,
     fecha_hora_fin TIMESTAMP WITH TIME ZONE,
     estado VARCHAR(30) CHECK (estado IN ('pendiente', 'anticipo_pendiente', 'confirmada', 'cancelada')) DEFAULT 'pendiente',
-    link_comprobante TEXT
+    link_comprobante TEXT,
+    pago_tarjeta NUMERIC(10, 2) DEFAULT 0.0,
+    pago_efectivo NUMERIC(10, 2) DEFAULT 0.0,
+    descuento_especial BOOLEAN DEFAULT false,
+    insumo_tinte_tubos INTEGER DEFAULT 0,
+    insumo_tinte_tapa_bella INTEGER DEFAULT 0,
+    insumo_tinte_tapa_loreal INTEGER DEFAULT 0,
+    insumo_tinte_precio_tubo NUMERIC(10, 2) DEFAULT 220.00,
+    insumo_tinte_precio_bella NUMERIC(10, 2) DEFAULT 50.00,
+    insumo_tinte_precio_loreal NUMERIC(10, 2) DEFAULT 60.00,
+    precio_cobrado NUMERIC(10, 2) DEFAULT NULL
 );
 
 -- 5. Mensajes Table (for Chat CRM and AI memory)
