@@ -36,9 +36,17 @@ const initialData = {
     { id: 5, nombre: 'Cande', especialidades: ['Uñas'], color: '#f43f5e', activo: true },
     { id: 6, nombre: 'Judith', especialidades: ['Uñas'], color: '#f59e0b', activo: true },
     { id: 7, nombre: 'Laura', especialidades: [
-      'Uñas', 'Lifting',
+      // Uñas
+      'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
+      // Lifting
+      'Lifting de pestañas', 'Lifting de pestañas/tinta',
+      // Cortes
       'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
-      'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente'
+      // Tintes
+      'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+      // Depilación
+      'Espalda completa (IPL)', 'Media espalda (IPL)', 'Brazos (IPL) - $3200', 'Abdomen (IPL)', 'Piernas completas (IPL)', 'Media pierna (IPL)', 'Brazos (IPL) - $3800', 'Bigote (IPL)', 'Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 'Paquete IPL: Axilas, piernas, bikini y area gluteal', 'Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)',
+      'Depilación Cera Abdomen', 'Depilación Cera Axila', 'Depilación Cera Bozo o mentón', 'Depilación Cera Brazo', 'Depilación Cera Cejas', 'Diseño de cejas (Cera)', 'Depilación Cera Espalda completa', 'Depilación Cera Bikini', 'Depilación Cera Ingles', 'Depilación Cera Linea central abdomen', 'Depilación Cera Media espalda', 'Depilación Cera Pierna completa', 'Depilación Cera Media pierna', 'Depilación Cera Patillas', 'Cara completa (Cera)'
     ], color: '#c084fc', activo: true },
     { id: 8, nombre: 'Lizbeth', especialidades: ['Microblading', 'Micropigmentación'], color: '#d97706', activo: true },
     { id: 9, nombre: 'Fran', especialidades: ['Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero'], color: '#6366f1', activo: true },
@@ -164,11 +172,19 @@ async function initDb() {
           await pool.query("UPDATE estilistas SET color = '#854d0e' WHERE nombre = 'Fran'");
           await pool.query("UPDATE estilistas SET color = '#fb923c' WHERE nombre = 'Tony'");
           
-          // Update specialties for Laura
+          // Update specialties for Laura (cuts, color, nails, hair removal, lifting)
           await pool.query(`UPDATE estilistas SET especialidades = ARRAY[
-            'Uñas', 'Lifting',
+            -- Uñas
+            'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
+            -- Lifting
+            'Lifting de pestañas', 'Lifting de pestañas/tinta',
+            -- Cortes
             'Cortes dama o niña', 'Cortes caballero o niño', 'Contorno caballero', 'Corte fleco', 'Barba caballero',
-            'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente'
+            -- Tintes
+            'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
+            -- Depilación
+            'Espalda completa (IPL)', 'Media espalda (IPL)', 'Brazos (IPL) - $3200', 'Abdomen (IPL)', 'Piernas completas (IPL)', 'Media pierna (IPL)', 'Brazos (IPL) - $3800', 'Bigote (IPL)', 'Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 'Paquete IPL: Axilas, piernas, bikini y area gluteal', 'Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)',
+            'Depilación Cera Abdomen', 'Depilación Cera Axila', 'Depilación Cera Bozo o mentón', 'Depilación Cera Brazo', 'Depilación Cera Cejas', 'Diseño de cejas (Cera)', 'Depilación Cera Espalda completa', 'Depilación Cera Bikini', 'Depilación Cera Ingles', 'Depilación Cera Linea central abdomen', 'Depilación Cera Media espalda', 'Depilación Cera Pierna completa', 'Depilación Cera Media pierna', 'Depilación Cera Patillas', 'Cara completa (Cera)'
           ] WHERE nombre = 'Laura'`);
 
           // Update specialties for Majo (nails, lashes, lifting, facials, cuts, color)
