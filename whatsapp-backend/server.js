@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { initDb, db } = require('./db');
+const { initDb, db, pool } = require('./db');
 const { handleConversation } = require('./gemini-agent');
 const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { useDbAuthState } = require('./db-auth');

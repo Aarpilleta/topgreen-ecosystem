@@ -1094,5 +1094,6 @@ const db = {
 
 module.exports = {
   initDb,
-  db
+  db,
+  pool
 };
