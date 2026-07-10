@@ -538,11 +538,38 @@
                                         </label>
                                         <input type="number" id="checkout-nanoplastia-oz" min="0.0" max="10.0" step="0.1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" placeholder="Rango 0.0 - 10.0">
                                     </div>
-                                    <div id="checkout-grams-block" class="hidden">
-                                        <label class="text-[9px] uppercase font-mono text-violet-400 block mb-1 flex items-center gap-1">
-                                            <i data-lucide="droplet" class="h-3 w-3 text-violet-400"></i> Mililitros (ml) de Tinte Usados:
-                                        </label>
-                                        <input type="number" id="checkout-tinte-grams" min="0.0" max="200.0" step="1" value="0.0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono" placeholder="Rango 0.0 - 200.0">
+                                    <div id="checkout-grams-block" class="hidden space-y-2">
+                                        <p class="text-[9px] uppercase font-mono text-violet-400 flex items-center gap-1">
+                                            <i data-lucide="flask-conical" class="h-3 w-3 text-violet-400"></i> Insumos de Tinte (se descuentan de comisión):
+                                        </p>
+                                        <div class="grid grid-cols-3 gap-1">
+                                            <div>
+                                                <label class="text-[8px] font-mono text-zinc-500 block mb-0.5">Tubos</label>
+                                                <input type="number" id="checkout-tinte-tubos" min="0" step="1" value="0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                            </div>
+                                            <div>
+                                                <label class="text-[8px] font-mono text-zinc-500 block mb-0.5">Tapas Bella</label>
+                                                <input type="number" id="checkout-tinte-tapa-bella" min="0" step="1" value="0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                            </div>
+                                            <div>
+                                                <label class="text-[8px] font-mono text-zinc-500 block mb-0.5">Tapas L'oreal</label>
+                                                <input type="number" id="checkout-tinte-tapa-loreal" min="0" step="1" value="0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-1">
+                                            <div>
+                                                <label class="text-[8px] font-mono text-zinc-600 block mb-0.5">$/Tubo</label>
+                                                <input type="number" id="checkout-tinte-precio-tubo" min="0" step="1" value="220" class="w-full bg-zinc-950 border border-zinc-700 rounded p-1 text-xs text-zinc-400 focus:outline-none font-mono">
+                                            </div>
+                                            <div>
+                                                <label class="text-[8px] font-mono text-zinc-600 block mb-0.5">$/Tapa Bella</label>
+                                                <input type="number" id="checkout-tinte-precio-bella" min="0" step="1" value="50" class="w-full bg-zinc-950 border border-zinc-700 rounded p-1 text-xs text-zinc-400 focus:outline-none font-mono">
+                                            </div>
+                                            <div>
+                                                <label class="text-[8px] font-mono text-zinc-600 block mb-0.5">$/Tapa L'oreal</label>
+                                                <input type="number" id="checkout-tinte-precio-loreal" min="0" step="1" value="60" class="w-full bg-zinc-950 border border-zinc-700 rounded p-1 text-xs text-zinc-400 focus:outline-none font-mono">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -579,7 +606,24 @@
                                         <option value="Efectivo">💵 Efectivo</option>
                                         <option value="Tarjeta">💳 Tarjeta</option>
                                         <option value="Transferencia">🏦 Transferencia</option>
+                                        <option value="Dividido">💳+💵 Dividido (Tarjeta+Efectivo)</option>
                                     </select>
+                                    <!-- Split payment fields -->
+                                    <div id="checkout-split-fields" class="hidden mt-2 grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Tarjeta ($)</label>
+                                            <input type="number" id="checkout-split-card" min="0" step="1" value="0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                        </div>
+                                        <div>
+                                            <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-0.5">Efectivo ($)</label>
+                                            <input type="number" id="checkout-split-cash" min="0" step="1" value="0" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                        </div>
+                                    </div>
+                                    <!-- Descuento especial Tony -->
+                                    <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                        <input type="checkbox" id="checkout-tony-discount" class="rounded accent-emerald-500" onchange="validateCheckoutSubmitButton()">
+                                        <span class="text-[9px] uppercase font-mono text-zinc-400">🎖️ Descuento Especial Tony <span class="text-zinc-600">(comisión s/ precio normal)</span></span>
+                                    </label>
                                 </div>
                                 <p id="checkout-status-text" class="text-[10px] text-zinc-550 font-medium mt-1">Ninguna transacción en cola.</p>
                             </div>
@@ -2588,6 +2632,11 @@
         }
 
         function handlePaymentMethodChange() {
+            const method = document.getElementById('checkout-payment-method').value;
+            const splitFields = document.getElementById('checkout-split-fields');
+            if (splitFields) {
+                splitFields.classList.toggle('hidden', method !== 'Dividido');
+            }
             validateCheckoutSubmitButton();
         }
 
@@ -2606,7 +2655,7 @@
                 }
             }
 
-            const isValidPaymentMethod = (paymentMethod === 'Efectivo' || paymentMethod === 'Tarjeta' || paymentMethod === 'Transferencia');
+            const isValidPaymentMethod = (paymentMethod === 'Efectivo' || paymentMethod === 'Tarjeta' || paymentMethod === 'Transferencia' || paymentMethod === 'Dividido');
 
             if (!isAlreadyPaid && isValidPaymentMethod) {
                 submitBtn.disabled = false;
@@ -2765,22 +2814,15 @@
                         qtyToDeduct = Math.round(insumoVal);
                     }
                 } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
-                    const gramsInput = document.getElementById('checkout-tinte-grams');
-                    const insumoVal = gramsInput ? parseFloat(gramsInput.value) || 0 : 0;
-                    
-                    if (unit === 'oz') {
-                        if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 7) {
-                            throw new Error("Ingrese un valor de onzas de tinte entre 0.0 y 7.0");
-                        }
-                        productCost = insumoVal * 120;
-                        qtyToDeduct = Math.round(insumoVal * 30);
-                    } else {
-                        if (isNaN(insumoVal) || insumoVal < 0 || insumoVal > 200) {
-                            throw new Error("Ingrese un valor de mililitros (ml) de tinte entre 0.0 y 200.0");
-                        }
-                        productCost = insumoVal * 4;
-                        qtyToDeduct = Math.round(insumoVal);
-                    }
+                    // Tubos y tapas de decolorante
+                    const tubosVal = parseFloat(document.getElementById('checkout-tinte-tubos')?.value) || 0;
+                    const tapaBellaVal = parseFloat(document.getElementById('checkout-tinte-tapa-bella')?.value) || 0;
+                    const tapaLorealVal = parseFloat(document.getElementById('checkout-tinte-tapa-loreal')?.value) || 0;
+                    const precioTuboVal = parseFloat(document.getElementById('checkout-tinte-precio-tubo')?.value) || 220;
+                    const precioBellaVal = parseFloat(document.getElementById('checkout-tinte-precio-bella')?.value) || 50;
+                    const precioLorealVal = parseFloat(document.getElementById('checkout-tinte-precio-loreal')?.value) || 60;
+                    productCost = (tubosVal * precioTuboVal) + (tapaBellaVal * precioBellaVal) + (tapaLorealVal * precioLorealVal);
+                    qtyToDeduct = Math.round(tubosVal * 60); // approx 60g per tube
                 }
 
                 if (matchedService && matchedService.stockKey) {
@@ -2796,18 +2838,22 @@
 
                 const finalTotal = basePrice + extraPrice + tipVal;
                 
+                // Descuento especial Tony: comisión sobre precio de lista original, no el cobrado
+                const tonyDiscount = document.getElementById('checkout-tony-discount')?.checked || false;
+                const commissionBase = tonyDiscount ? (appObj ? appObj.cost : basePrice) : basePrice;
+
                 // Algoritmo de Comisiones Blindadas
                 let svcComm = 0;
                 if (normSrvName.includes('nanoplastia')) {
-                    svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
+                    svcComm = Math.round(Math.max(0, commissionBase - productCost) * 0.35);
                 } else if (normSrvName.includes('tinte') || normSrvName.includes('balayage') || normSrvName.includes('luces') || normSrvName.includes('babylight') || normSrvName.includes('color') || normSrvName.includes('matiz') || normSrvName.includes('extracción') || normSrvName.includes('base permanente')) {
-                    svcComm = Math.round(Math.max(0, basePrice - productCost) * 0.35);
+                    svcComm = Math.round(Math.max(0, commissionBase - productCost) * 0.35);
                 } else if (normSrvName.includes('uña') || normSrvName.includes('man-ped')) {
-                    svcComm = Math.round(basePrice * 0.45);
+                    svcComm = Math.round(commissionBase * 0.45);
                 } else if (normSrvName.includes('pestaña') || normSrvName.includes('corte')) {
-                    svcComm = Math.round(basePrice * 0.40);
+                    svcComm = Math.round(commissionBase * 0.40);
                 } else {
-                    svcComm = Math.round(basePrice * 0.30);
+                    svcComm = Math.round(commissionBase * 0.30);
                 }
                 
                 const totalComm = svcComm + retailComm;
@@ -2822,11 +2868,13 @@
                     body: JSON.stringify({
                         stylist: stylistName,
                         service: tipVal > 0 
-                            ? `${serviceName} + Propina (${paymentMethod})` 
-                            : `${serviceName} (${paymentMethod})`,
+                            ? `${serviceName} + Propina (${paymentMethod}${tonyDiscount ? ' · Descuento Tony' : ''})` 
+                            : `${serviceName} (${paymentMethod}${tonyDiscount ? ' · Descuento Tony' : ''})`,
                         amount: finalTotal,
                         commission: totalComm,
                         propina: tipVal,
+                        pago_tarjeta: paymentMethod === 'Dividido' ? (parseFloat(document.getElementById('checkout-split-card')?.value) || 0) : (paymentMethod === 'Tarjeta' ? finalTotal : 0),
+                        pago_efectivo: paymentMethod === 'Dividido' ? (parseFloat(document.getElementById('checkout-split-cash')?.value) || 0) : (paymentMethod === 'Efectivo' ? finalTotal : 0),
                         type: "checkout",
                         date: dateStr,
                         cita_id: citaIdVal
@@ -2850,9 +2898,16 @@
                 // Reset fields
                 document.getElementById('checkout-appointment-select').value = "direct";
                 document.getElementById('checkout-nanoplastia-oz').value = "0.0";
-                document.getElementById('checkout-tinte-grams').value = "0.0";
+                const tgEl = document.getElementById('checkout-tinte-grams'); if (tgEl) tgEl.value = "0.0";
+                const tubosEl = document.getElementById('checkout-tinte-tubos'); if (tubosEl) tubosEl.value = "0";
+                const tapaBellaEl = document.getElementById('checkout-tinte-tapa-bella'); if (tapaBellaEl) tapaBellaEl.value = "0";
+                const tapaLorealEl = document.getElementById('checkout-tinte-tapa-loreal'); if (tapaLorealEl) tapaLorealEl.value = "0";
+                const splitCard = document.getElementById('checkout-split-card'); if (splitCard) splitCard.value = "0";
+                const splitCash = document.getElementById('checkout-split-cash'); if (splitCash) splitCash.value = "0";
+                const tonyChk = document.getElementById('checkout-tony-discount'); if (tonyChk) tonyChk.checked = false;
                 document.getElementById('checkout-tip').value = "0";
                 document.getElementById('checkout-insumos-container').classList.add('hidden');
+                const splitFields = document.getElementById('checkout-split-fields'); if (splitFields) splitFields.classList.add('hidden');
                 document.getElementById('checkout-payment-method').value = "";
                 document.getElementById('checkout-amount-display').value = "";
                 state.customCheckoutPrice = null;
@@ -3412,7 +3467,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             initTheme();
-            switchUser('Tony', true);
+            switchUser('Recepción', true);
             initCustomerAutocomplete();
             
             const amtDisplay = document.getElementById('checkout-amount-display');
