@@ -92,7 +92,7 @@ function scheduleHandoffTimeout(chatId) {
 // Helper to determine if the bot is eligible to answer
 async function checkBotEligibility(chatId, messageText) {
   // 1. Always answer if it's an ad message from the client
-  const isAd = /nanoplastia/i.test(messageText) || /ipl/i.test(messageText) || /micropigmentacion|micropigmentación/i.test(messageText);
+  const isAd = /nanoplastia|nano/i.test(messageText) || /ipl/i.test(messageText) || /microblading|micropigmentacion|micropigmentación/i.test(messageText);
   if (isAd) return { shouldAnswer: true, isAd: true };
 
   // 2. Load history
@@ -105,9 +105,9 @@ async function checkBotEligibility(chatId, messageText) {
     const isRecent = (Date.now() - new Date(lastMsg.fecha_hora)) < 24 * 60 * 60 * 1000;
     
     if (isOutgoing && isRecent) {
-      const isTemplateOrAd = /nanoplastia/i.test(lastMsg.texto) || 
+      const isTemplateOrAd = /nanoplastia|nano/i.test(lastMsg.texto) || 
                              /ipl/i.test(lastMsg.texto) || 
-                             /micropigmentacion|micropigmentación/i.test(lastMsg.texto) ||
+                             /microblading|micropigmentacion|micropigmentación/i.test(lastMsg.texto) ||
                              /promocion|promoción/i.test(lastMsg.texto) ||
                              /descuento/i.test(lastMsg.texto) ||
                              /anuncio/i.test(lastMsg.texto) ||
@@ -313,9 +313,9 @@ async function connectToWhatsApp() {
                 await db.saveMessage(chatId, sender, messageText);
 
                 // If this is a welcome template or ad, reactivate the bot so it will handle client replies
-                const isTemplateOrAd = /nanoplastia/i.test(messageText) || 
+                const isTemplateOrAd = /nanoplastia|nano/i.test(messageText) || 
                                        /ipl/i.test(messageText) || 
-                                       /micropigmentacion|micropigmentación/i.test(messageText) ||
+                                       /microblading|micropigmentacion|micropigmentación/i.test(messageText) ||
                                        /promocion|promoción/i.test(messageText) ||
                                        /descuento/i.test(messageText) ||
                                        /anuncio/i.test(messageText) ||

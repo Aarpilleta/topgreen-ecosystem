@@ -584,16 +584,20 @@
                                     </div>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 gap-2">
+                                <div class="space-y-2">
                                     <div>
-                                        <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Insumo/Retail Extra:</label>
-                                        <select id="checkout-product-addon" onchange="handleCheckoutProductAddon()" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-zinc-300 focus:outline-none font-mono">
-                                            <option value="none">-- Ninguno --</option>
-                                        </select>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <label class="text-[9px] uppercase font-mono text-zinc-500">Productos / Retail Extra:</label>
+                                            <button type="button" onclick="addCheckoutAddon()"
+                                                class="text-[9px] text-emerald-400 font-mono font-bold hover:text-emerald-300 flex items-center gap-0.5 border border-emerald-700/40 rounded px-1.5 py-0.5 bg-emerald-900/20 transition-colors">
+                                                <i data-lucide="plus" class="h-2.5 w-2.5"></i>&nbsp;Añadir producto
+                                            </button>
+                                        </div>
+                                        <div id="checkout-addons-list" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
                                     </div>
                                     <div>
                                         <label class="text-[9px] uppercase font-mono text-zinc-500 block mb-1">Propina (MXN):</label>
-                                        <input type="number" id="checkout-tip" oninput="handleCheckoutProductAddon()" min="0" step="1" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
+                                        <input type="number" id="checkout-tip" oninput="recalculateCheckoutTotal()" min="0" step="1" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-white focus:outline-none font-mono" placeholder="0">
                                     </div>
                                 </div>
 
@@ -1825,12 +1829,13 @@
                     displayName = state.unitPreference === 'oz' ? 'Tinte Jade Green (OZ)' : 'Tinte Jade Green (g)';
                 }
 
+                const priceBadge = item.price != null ? `<span class="text-emerald-400/90 font-sans font-semibold"> • $${item.price}</span>` : '';
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between p-2 bg-zinc-950/40 border border-zinc-850 rounded-lg";
                 div.innerHTML = `
                     <div class="truncate pr-1 flex flex-col">
                         <span class="text-xs font-medium block text-zinc-300 truncate">${displayName}</span>
-                        <span class="text-[9px] font-mono text-zinc-500 font-bold uppercase">${unit}</span>
+                        <span class="text-[9px] font-mono text-zinc-500 font-bold uppercase">${unit}${priceBadge}</span>
                     </div>
                     <div class="flex items-center space-x-1.5 shrink-0">
                         <input type="number" step="${state.unitPreference === 'oz' && (key === 'nanoplastia_elixir' || key === 'jade_tinte') ? '0.1' : '1'}" value="${displayStock}" 
@@ -2481,28 +2486,7 @@
                 updateLockCostPreview();
             }
 
-            // Dynamically populate product addon select from state.inventory (retail & insumos)
-            const selectAddon = document.getElementById('checkout-product-addon');
-            if (selectAddon) {
-                const currentAddonVal = selectAddon.value;
-                let optionsHtml = '<option value="none">-- Ninguno --</option>';
-                if (state.inventory) {
-                    Object.keys(state.inventory).forEach(key => {
-                        const item = state.inventory[key];
-                        if (item.price !== null) {
-                            optionsHtml += `<option value="${key}">${item.name} (+ $${item.price.toFixed(2)})</option>`;
-                        } else {
-                            optionsHtml += `<option value="${key}">${item.name} (Insumo - Consumo)</option>`;
-                        }
-                    });
-                }
-                selectAddon.innerHTML = optionsHtml;
-                if (Array.from(selectAddon.options).some(o => o.value === currentAddonVal)) {
-                    selectAddon.value = currentAddonVal;
-                } else {
-                    selectAddon.value = 'none';
-                }
-            }
+            // No static addon select to repopulate; inventory options are built dynamically per-row via buildInventoryOptionsHtml()
 
             validateCheckoutSubmitButton();
             updatePOSInsumosFields();
@@ -2590,11 +2574,10 @@
             const selectApp = document.getElementById('checkout-appointment-select');
             const selectSrv = document.getElementById('checkout-service-select');
             const selectChStylist = document.getElementById('checkout-stylist-select');
-            const selectAddon = document.getElementById('checkout-product-addon');
             const badge = document.getElementById('checkout-badge-status');
             
             const target = selectApp.value;
-            selectAddon.value = "none";
+            resetCheckoutAddons();
             document.getElementById('checkout-payment-method').value = ""; // Reset payment method
 
             if (target === 'direct') {
@@ -2715,25 +2698,105 @@
             const id = document.getElementById('checkout-service-select').value;
             const srv = state.services.find(s => s.id == id);
             if (srv) {
-                document.getElementById('checkout-amount-display').value = srv.price.toLocaleString('es-MX', {minimumFractionDigits: 2});
                 document.getElementById('checkout-status-text').innerText = "Venta directa configurada.";
+                recalculateCheckoutTotal(true);
                 validateCheckoutSubmitButton();
                 updatePOSInsumosFields();
             }
         }
 
-        function handleCheckoutProductAddon(isAuto = false) {
-            if (!isAuto) {
-                state.customCheckoutPrice = null;
+        // ── Multi-Product Addon System ──────────────────────────────────────────
+        let _addonCounter = 0;
+
+        function buildInventoryOptionsHtml() {
+            if (!state.inventory) return '';
+            return Object.keys(state.inventory).map(key => {
+                const item = state.inventory[key];
+                const priceLabel = item.price != null ? ` ($${item.price.toFixed(0)})` : ' ($0)';
+                return `<option value="${key}">${item.name}${priceLabel}</option>`;
+            }).join('');
+        }
+
+        function addCheckoutAddon() {
+            const id = _addonCounter++;
+            const opts = buildInventoryOptionsHtml();
+            const row = document.createElement('div');
+            row.id = `checkout-addon-row-${id}`;
+            row.className = 'flex items-center gap-1.5 bg-zinc-900/50 p-1.5 rounded-lg border border-zinc-800';
+            row.innerHTML = `
+                <select id="checkout-addon-select-${id}" onchange="onCheckoutAddonProductChange(${id})"
+                    class="flex-1 min-w-0 bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-zinc-300 font-mono focus:outline-none focus:border-emerald-600">
+                    <option value="none">-- Seleccionar producto --</option>
+                    ${opts}
+                </select>
+                <div class="relative w-20 shrink-0">
+                    <span class="absolute left-1.5 top-1.5 text-zinc-500 text-[9px] font-mono">$</span>
+                    <input type="number" id="checkout-addon-price-${id}" value="0" min="0" step="1"
+                        oninput="recalculateCheckoutTotal()"
+                        class="w-full bg-zinc-950 border border-zinc-700 rounded py-1 pl-3.5 pr-1 text-xs text-white font-mono focus:outline-none focus:border-emerald-600">
+                </div>
+                <button type="button" onclick="removeCheckoutAddon(${id})" class="shrink-0 text-rose-500 hover:text-rose-400 transition-colors">
+                    <i data-lucide="x-circle" class="h-3.5 w-3.5"></i>
+                </button>
+            `;
+            document.getElementById('checkout-addons-list').appendChild(row);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            recalculateCheckoutTotal();
+        }
+
+        function removeCheckoutAddon(id) {
+            const row = document.getElementById(`checkout-addon-row-${id}`);
+            if (row) row.remove();
+            recalculateCheckoutTotal();
+        }
+
+        function onCheckoutAddonProductChange(id) {
+            state.customCheckoutPrice = null;
+            const sel = document.getElementById(`checkout-addon-select-${id}`);
+            const priceInput = document.getElementById(`checkout-addon-price-${id}`);
+            if (sel && priceInput) {
+                const key = sel.value;
+                if (key !== 'none' && state.inventory[key]) {
+                    priceInput.value = state.inventory[key].price != null ? state.inventory[key].price : 0;
+                } else {
+                    priceInput.value = 0;
+                }
             }
+            recalculateCheckoutTotal();
+        }
+
+        function getCheckoutAddonsData() {
+            const list = document.getElementById('checkout-addons-list');
+            if (!list) return [];
+            const addons = [];
+            list.querySelectorAll('[id^="checkout-addon-row-"]').forEach(row => {
+                const suffix = row.id.replace('checkout-addon-row-', '');
+                const sel = document.getElementById(`checkout-addon-select-${suffix}`);
+                const priceInput = document.getElementById(`checkout-addon-price-${suffix}`);
+                if (sel && sel.value !== 'none') {
+                    addons.push({
+                        key: sel.value,
+                        price: parseFloat(priceInput?.value) || 0,
+                        name: (sel.options[sel.selectedIndex]?.text || sel.value).replace(/\s*\(.*?\)$/, '')
+                    });
+                }
+            });
+            return addons;
+        }
+
+        function resetCheckoutAddons() {
+            const list = document.getElementById('checkout-addons-list');
+            if (list) list.innerHTML = '';
+        }
+
+        function recalculateCheckoutTotal(isAuto = false) {
+            if (!isAuto) state.customCheckoutPrice = null;
             if (state.customCheckoutPrice !== null) {
                 document.getElementById('checkout-amount-display').value = state.customCheckoutPrice;
                 return;
             }
             const target = document.getElementById('checkout-appointment-select').value;
-            const addonKey = document.getElementById('checkout-product-addon').value;
-            const tipInput = document.getElementById('checkout-tip');
-            const tipVal = tipInput ? parseFloat(tipInput.value) || 0 : 0;
+            const tipVal = parseFloat(document.getElementById('checkout-tip')?.value) || 0;
             
             let baseAmt = 0;
             if (target === 'direct') {
@@ -2745,12 +2808,10 @@
                 baseAmt = getActiveSchedule()[st][hr].cost;
             }
 
-            let extra = 0;
-            if (addonKey !== 'none' && state.inventory[addonKey]) {
-                extra = state.inventory[addonKey].price || 0;
-            }
+            let extraTotal = 0;
+            getCheckoutAddonsData().forEach(a => extraTotal += a.price);
 
-            const total = baseAmt + extra + tipVal;
+            const total = baseAmt + extraTotal + tipVal;
             document.getElementById('checkout-amount-display').value = total.toLocaleString('es-MX', {minimumFractionDigits: 2});
         }
 
@@ -2761,7 +2822,6 @@
 
             const target = document.getElementById('checkout-appointment-select').value;
             const srvId = document.getElementById('checkout-service-select').value;
-            const addonKey = document.getElementById('checkout-product-addon').value;
             const paymentMethod = document.getElementById('checkout-payment-method').value;
             const sched = getActiveSchedule();
 
@@ -2800,19 +2860,20 @@
                 let extraCost = 0;
                 let retailComm = 0;
 
-                // Handle Addon Inventory Dynamically (Retail and Insumos)
-                if (addonKey !== 'none') {
-                    const item = state.inventory[addonKey];
+                // Handle Multi-Product Addons
+                const addonsData = getCheckoutAddonsData();
+                for (const addon of addonsData) {
+                    const item = state.inventory[addon.key];
                     if (item) {
                         if (item.stock > 0) {
                             await fetchAPI('/api/inventario/update', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ key_name: addonKey, stock: item.stock - 1 })
+                                body: JSON.stringify({ key_name: addon.key, stock: item.stock - 1 })
                             });
-                            extraPrice += item.price || 0;
+                            extraPrice += addon.price;
                             extraCost += item.costPerUnit || 0;
-                            retailComm = item.price ? Math.round((item.price / 1.16) * 0.1) : 0;
+                            retailComm += addon.price ? Math.round((addon.price / 1.16) * 0.1) : 0;
                         } else {
                             throw new Error(`Stock de ${item.name} agotado.`);
                         }
@@ -2957,6 +3018,7 @@
                 const splitFields = document.getElementById('checkout-split-fields'); if (splitFields) splitFields.classList.add('hidden');
                 document.getElementById('checkout-payment-method').value = "";
                 document.getElementById('checkout-amount-display').value = "";
+                resetCheckoutAddons();
                 state.customCheckoutPrice = null;
                 
                 // Show success dot/text

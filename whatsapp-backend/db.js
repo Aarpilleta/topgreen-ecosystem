@@ -20,12 +20,13 @@ const initialData = {
     { id: 9, nombre: 'Lifting', duracion_minutos: 60, precio_fijo: 500.00 },
     { id: 10, nombre: 'Maquillaje', duracion_minutos: 60, precio_fijo: 1200.00 },
     { id: 11, nombre: 'Microblading', duracion_minutos: 180, precio_fijo: 4800.00 },
-    { id: 12, nombre: 'Micropigmentación', duracion_minutos: 180, precio_fijo: 5500.00 }
+    { id: 12, nombre: 'Micropigmentación', duracion_minutos: 180, precio_fijo: 5500.00 },
+    { id: 13, nombre: 'Diagnóstico IPL', duracion_minutos: 20, precio_fijo: 300.00 }
   ],
   estilistas: [
     { id: 1, nombre: 'Pili', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#10b981', activo: true },
     { id: 2, nombre: 'Joel', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Botox Capilar'], color: '#3b82f6', activo: true },
-    { id: 3, nombre: 'Rose', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Depilación IPL', 'Pestañas', 'Lifting', 'Maquillaje', 'Botox Capilar'], color: '#a855f7', activo: true },
+    { id: 3, nombre: 'Rose', especialidades: ['Nanoplastia Premium', 'Balayage Premium', 'Corte Premium', 'Tinte de Cobertura', 'Depilación IPL', 'Diagnóstico IPL', 'Pestañas', 'Lifting', 'Maquillaje', 'Botox Capilar'], color: '#a855f7', activo: true },
     { id: 4, nombre: 'Majo', especialidades: [
       'Esmaltado manos & pies', 'Gelish', 'Gelish c/n rubber', 'Retoque rubber c/n gelish', 'Rubber', 'Retoque rubber', 'Gelish francés', 'Retiro de gelish & rubber', 'Press on', 'Uñas acrílicas', 'Uñas acrílicas c/n gelish', 'Uñas esculturales', 'Poly gel', 'Retoque de poly gel', 'Uñas tip', 'Retoque esculturales', 'Retoque acrílico', 'Retoque uñas tip', 'Retoque press on', 'Manicura', 'Manicura c/n esmaltado', 'Manicura ruso', 'Manicura ruso c/n esmalte', 'Pedicura', 'Pedicura c/n esmaltado', 'Pedicura ruso', 'Pedicura ruso c/n esmalte', 'Retiro esculturales', 'Retiro acrílico',
       'Pestañas volumen', 'Efecto rimel', 'Extensiones clásicas', 'Extensiones híbridas', 'Retoque clásicas', 'Retoque efecto rímel', 'Retoque híbrida', 'Retoque volumen', 'Retiro pestañas', 'Pestañas de tira', 'Lifting de pestañas', 'Lifting de pestañas/tinta',
@@ -45,7 +46,7 @@ const initialData = {
       // Tintes
       'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
       // Depilación
-      'Espalda completa (IPL)', 'Media espalda (IPL)', 'Brazos (IPL) - $3200', 'Abdomen (IPL)', 'Piernas completas (IPL)', 'Media pierna (IPL)', 'Brazos (IPL) - $3800', 'Bigote (IPL)', 'Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 'Paquete IPL: Axilas, piernas, bikini y area gluteal', 'Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)',
+      'Depilación IPL', 'Diagnóstico IPL', 'Espalda completa (IPL)', 'Media espalda (IPL)', 'Brazos (IPL) - $3200', 'Abdomen (IPL)', 'Piernas completas (IPL)', 'Media pierna (IPL)', 'Brazos (IPL) - $3800', 'Bigote (IPL)', 'Paquete IPL: Brazos, pierna completa, bikini y área gluteal', 'Paquete IPL: Axilas, piernas, bikini y area gluteal', 'Cara completa IPL (barbilla, bigote, patillas, mejillas, frente)',
       'Depilación Cera Abdomen', 'Depilación Cera Axila', 'Depilación Cera Bozo o mentón', 'Depilación Cera Brazo', 'Depilación Cera Cejas', 'Diseño de cejas (Cera)', 'Depilación Cera Espalda completa', 'Depilación Cera Bikini', 'Depilación Cera Ingles', 'Depilación Cera Linea central abdomen', 'Depilación Cera Media espalda', 'Depilación Cera Pierna completa', 'Depilación Cera Media pierna', 'Depilación Cera Patillas', 'Cara completa (Cera)'
     ], color: '#c084fc', activo: true },
     { id: 8, nombre: 'Lizbeth', especialidades: ['Microblading', 'Micropigmentación'], color: '#d97706', activo: true },
@@ -58,9 +59,120 @@ const initialData = {
   ],
   inventario: [
     { key_name: 'nanoplastia_elixir', nombre: 'Elixir Nanoplastia (ml)', stock: 1500, min: 500, cost_per_unit: 1.50, price: null, item_type: 'insumo' },
-    { key_name: 'jade_tinte', nombre: 'Tinte Jade Green (g)', stock: 380, min: 300, cost_per_unit: 4.00, price: null, item_type: 'insumo' },
-    { key_name: 'shampoo_retail', nombre: 'Shampoo Jade Protect (Pzs)', stock: 12, min: 4, cost_per_unit: 200.00, price: 450.00, item_type: 'retail' },
-    { key_name: 'mask_retail', nombre: 'Mascarilla Menta (Pzs)', stock: 2, min: 3, cost_per_unit: 300.00, price: 680.00, item_type: 'retail' }
+    { key_name: 'jade_tinte', nombre: 'Tinte Jade Green (g)', stock: 260, min: 300, cost_per_unit: 4.00, price: null, item_type: 'insumo' },
+    { key_name: 'shampoo_retail', nombre: 'Shampoo Jade Protect (Pzs)', stock: 11, min: 4, cost_per_unit: 200.00, price: 450.00, item_type: 'retail' },
+    { key_name: 'mask_retail', nombre: 'Mascarilla Menta (Pzs)', stock: 1, min: 3, cost_per_unit: 300.00, price: 680.00, item_type: 'retail' },
+    { key_name: 'tec_italy_due_facceta_lunga_durata_300_ml', nombre: '[Tec Italy] Due facceta lunga durata 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 650.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_shampoo_300_ml', nombre: '[Tec Italy] lumina shampoo 300 ml', stock: 3, min: 2, cost_per_unit: 0.00, price: 440.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_conditioner_300_ml', nombre: '[Tec Italy] Lumina conditioner 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 480.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_silver_shampoo_300_ml', nombre: '[Tec Italy] Lumina Silver Shampoo 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 440.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_shampoosilver_1_litro', nombre: '[Tec Italy] Lumina shampooSilver 1 litro', stock: 0, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'tec_italy_post_color_shampoo_300_ml', nombre: '[Tec Italy] post color shampoo 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_post_color_shampoo_1_litro', nombre: '[Tec Italy] Post color Shampoo 1 litro', stock: 1, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_violeta_300_ml', nombre: '[Tec Italy] Lumina forza violeta 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_chocolate_300_ml', nombre: '[Tec Italy] Lumina forza chocolate 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_black_300_ml', nombre: '[Tec Italy] Lumina forza black 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_rosa_300_ml', nombre: '[Tec Italy] Lumina forza rosa 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_blonde_300_ml', nombre: '[Tec Italy] Lumina forza blonde 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_silver_300_ml', nombre: '[Tec Italy] Lumina forza Silver 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_red_300_ml', nombre: '[Tec Italy] Lumina forza Red 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_plata_300_ml', nombre: '[Tec Italy] Lumina Forza Plata 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_blue_300_ml', nombre: '[Tec Italy] Lumina Forza Blue 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_lumina_forza_cobre_300_ml', nombre: '[Tec Italy] Lumina forza cobre 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_olio_vital_125_ml', nombre: '[Tec Italy] Olio vital 125 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 670.00, item_type: 'retail' },
+    { key_name: 'tec_italy_olivo_vital_color_125_ml', nombre: '[Tec Italy] Olivo vital color 125 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 670.00, item_type: 'retail' },
+    { key_name: 'tec_italy_essential_oil_shampoo_300_ml', nombre: '[Tec Italy] Essential Oil shampoo 300 ml', stock: 6, min: 2, cost_per_unit: 0.00, price: 440.00, item_type: 'retail' },
+    { key_name: 'tec_italy_essential_oil_conditioner_300_ml', nombre: '[Tec Italy] Essential Oil conditioner 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 530.00, item_type: 'retail' },
+    { key_name: 'tec_italy_essential_oil_treatment_125_ml', nombre: '[Tec Italy] Essential Oil Treatment 125 ml', stock: 10, min: 2, cost_per_unit: 0.00, price: 700.00, item_type: 'retail' },
+    { key_name: 'tec_italy_essential_oil_mask', nombre: '[Tec Italy] Essential Oil Mask', stock: 7, min: 2, cost_per_unit: 0.00, price: 680.00, item_type: 'retail' },
+    { key_name: 'tec_italy_due_faccetta_massimo_300_ml', nombre: '[Tec Italy] Due faccetta Massimo 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 670.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shampoo_massimo_300_ml', nombre: '[Tec Italy] Shampoo Massimo 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_omni_restore_shampoo_300_ml', nombre: '[Tec Italy] Omni Restore Shampoo 300 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 440.00, item_type: 'retail' },
+    { key_name: 'tec_italy_omni_restore_acondicionador_300_ml', nombre: '[Tec Italy] Omni Restore Acondicionador 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 520.00, item_type: 'retail' },
+    { key_name: 'tec_italy_omni_restore_mascarilla_280_g', nombre: '[Tec Italy] Omni Restore mascarilla 280 G', stock: 2, min: 2, cost_per_unit: 0.00, price: 680.00, item_type: 'retail' },
+    { key_name: 'tec_italy_omni_restore_protector_125_ml', nombre: '[Tec Italy] Omni Restore protector 125 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 630.00, item_type: 'retail' },
+    { key_name: 'tec_italy_amino_keratin_280_g', nombre: '[Tec Italy] Amino keratin 280 G', stock: 1, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'tec_italy_amino_keratin_intensivo_mask_1_kg', nombre: '[Tec Italy] Amino keratin intensivo mask 1 kg', stock: 0, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'tec_italy_due_faccetta_giorno_per_giorno_300_ml', nombre: '[Tec Italy] Due faccetta Giorno per giorno 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 650.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shampoo_balsami_presto_300_ml', nombre: '[Tec Italy] Shampoo Balsami presto 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_balsami_presto_tratamiento_300_m', nombre: '[Tec Italy] Balsami presto tratamiento 300 m', stock: 4, min: 2, cost_per_unit: 0.00, price: 500.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shampoo_totale_condicionados_300_ml', nombre: '[Tec Italy] Shampoo totale condicionados 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 590.00, item_type: 'retail' },
+    { key_name: 'tec_italy_balsami_totale_300_ml', nombre: '[Tec Italy] Balsami totale 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 400.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shampoo_hi_moisturizing', nombre: '[Tec Italy] Shampoo Hi- Moisturizing', stock: 4, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_hi_moisturizing_conditioner_300_ml', nombre: '[Tec Italy] Hi-Moisturizing conditioner 300 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_hi_moisturizing_treatment_280_g', nombre: '[Tec Italy] Hi-Moisturizing treatment 280 G', stock: 2, min: 2, cost_per_unit: 0.00, price: 640.00, item_type: 'retail' },
+    { key_name: 'tec_italy_working_spray_400_ml', nombre: '[Tec Italy] Working spray 400 ml', stock: 6, min: 2, cost_per_unit: 0.00, price: 520.00, item_type: 'retail' },
+    { key_name: 'tec_italy_finishing_spray_400_ml', nombre: '[Tec Italy] Finishing Spray 400 ml', stock: 6, min: 2, cost_per_unit: 0.00, price: 520.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shine_spray_250_ml', nombre: '[Tec Italy] Shine Spray 250 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 500.00, item_type: 'retail' },
+    { key_name: 'tec_italy_silk_system_shine_125_ml', nombre: '[Tec Italy] Silk System Shine 125 ml', stock: 6, min: 2, cost_per_unit: 0.00, price: 480.00, item_type: 'retail' },
+    { key_name: 'tec_italy_metamorfosis_cream_300_ml', nombre: '[Tec Italy] Metamorfosis cream 300 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 520.00, item_type: 'retail' },
+    { key_name: 'tec_italy_gel_della_cera_effetto_humedo', nombre: '[Tec Italy] Gel Della Cera Effetto Húmedo', stock: 4, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_gel_della_cera_effetto_normal', nombre: '[Tec Italy] Gel Della Cera Effetto normal', stock: 8, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_pasta_de_la_arana', nombre: '[Tec Italy] Pasta de la araña', stock: 7, min: 2, cost_per_unit: 0.00, price: 400.00, item_type: 'retail' },
+    { key_name: 'tec_italy_scultore_fine_300_ml', nombre: '[Tec Italy] Scultore fine 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 400.00, item_type: 'retail' },
+    { key_name: 'tec_italy_gellini_300_ml', nombre: '[Tec Italy] Gellini 300 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_speciale_125_ml', nombre: '[Tec Italy] Speciale 125 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 270.00, item_type: 'retail' },
+    { key_name: 'tec_italy_curls_shampoo_300_ml', nombre: '[Tec Italy] Curls Shampoo 300 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 420.00, item_type: 'retail' },
+    { key_name: 'tec_italy_curls_conditioner_300_ml', nombre: '[Tec Italy] Curls conditioner 300 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 400.00, item_type: 'retail' },
+    { key_name: 'tec_italy_curls_defining_gel_300_ml', nombre: '[Tec Italy] Curls defining Gel 300 ml', stock: 6, min: 2, cost_per_unit: 0.00, price: 400.00, item_type: 'retail' },
+    { key_name: 'tec_italy_curls_defining_crema_300_ml', nombre: '[Tec Italy] Curls defining crema 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 520.00, item_type: 'retail' },
+    { key_name: 'tec_italy_due_faccetta_pro', nombre: '[Tec Italy] Due faccetta pro', stock: 4, min: 2, cost_per_unit: 0.00, price: 700.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shampoo_tonico', nombre: '[Tec Italy] Shampoo tónico', stock: 3, min: 2, cost_per_unit: 0.00, price: 370.00, item_type: 'retail' },
+    { key_name: 'tec_italy_shampoo_metamorfosis', nombre: '[Tec Italy] Shampoo Metamorfosis', stock: 7, min: 2, cost_per_unit: 0.00, price: 400.00, item_type: 'retail' },
+    { key_name: 'tec_italy_metamorfosis_cream_1_litro', nombre: '[Tec Italy] Metamorfosis cream 1 litro', stock: 1, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'tec_italy_profundo_shampoo_1_litro', nombre: '[Tec Italy] Profundo shampoo 1 litro', stock: 1, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'tec_italy_preciso_para_sellar_cuticula_1_litro', nombre: '[Tec Italy] Preciso para sellar cutícula 1 litro', stock: 1, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'l_oreal_absolut_repair_500_ml', nombre: '[L\'Oréal] Absolut repair 500 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 770.00, item_type: 'retail' },
+    { key_name: 'l_oreal_absolut_repair_300_ml', nombre: '[L\'Oréal] Absolut repair 300 ml', stock: 3, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_absolut_repair_mascarilla', nombre: '[L\'Oréal] Absolut repair mascarilla', stock: 1, min: 2, cost_per_unit: 0.00, price: 1008.00, item_type: 'retail' },
+    { key_name: 'l_oreal_metal_detox_shampoo_500_ml', nombre: '[L\'Oréal] Metal detox shampoo 500 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 930.00, item_type: 'retail' },
+    { key_name: 'l_oreal_absolut_repair_molecular_protector', nombre: '[L\'Oréal] Absolut repair molecular protector', stock: 2, min: 2, cost_per_unit: 0.00, price: 840.00, item_type: 'retail' },
+    { key_name: 'l_oreal_scalp_advance_shampoo_500_ml', nombre: '[L\'Oréal] Scalp advance shampoo 500 ml', stock: 3, min: 2, cost_per_unit: 0.00, price: 745.00, item_type: 'retail' },
+    { key_name: 'l_oreal_vitamina_color_shampoo_300_ml', nombre: '[L\'Oréal] Vitamina color shampoo 300 ml', stock: 5, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_vitamina_color_shampoo_500_ml', nombre: '[L\'Oréal] Vitamina color shampoo 500 ml', stock: 0, min: 2, cost_per_unit: 0.00, price: 750.00, item_type: 'retail' },
+    { key_name: 'l_oreal_liss_unlimited_300_ml', nombre: '[L\'Oréal] Liss unlimited 300 ml', stock: 4, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_liss_unlimited_500_ml', nombre: '[L\'Oréal] Liss unlimited 500 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 750.00, item_type: 'retail' },
+    { key_name: 'l_oreal_sensi_balance_500_ml_shampoo', nombre: '[L\'Oréal] Sensi balance 500 ml shampoo', stock: 3, min: 2, cost_per_unit: 0.00, price: 750.00, item_type: 'retail' },
+    { key_name: 'l_oreal_metal_detox_protector', nombre: '[L\'Oréal] Metal detox protector', stock: 1, min: 2, cost_per_unit: 0.00, price: 670.00, item_type: 'retail' },
+    { key_name: 'l_oreal_vitamina_color_spectrum_morado_300_ml', nombre: '[L\'Oréal] Vitamina color spectrum morado 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_vitamina_color_spectrum_verde_300_ml', nombre: '[L\'Oréal] Vitamina color spectrum verde 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_scalp_advance_anti_inconformista_shampoo_500_ml', nombre: '[L\'Oréal] Scalp advance anti inconformista shampoo 500 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: 750.00, item_type: 'retail' },
+    { key_name: 'l_oreal_pro_longer_shampoo_300_ml', nombre: '[L\'Oréal] Pro longer shampoo 300 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_pro_longer_shampoo_500_ml', nombre: '[L\'Oréal] Pro longer shampoo 500 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 750.00, item_type: 'retail' },
+    { key_name: 'l_oreal_metal_democracia_mascarilla_500_ml', nombre: '[L\'Oréal] Metal democracia mascarilla 500 ml', stock: 2, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'l_oreal_scalp_advance_anti_gras_500_ml_shampoo', nombre: '[L\'Oréal] Scalp advance anti gras 500 ml shampoo', stock: 2, min: 2, cost_per_unit: 0.00, price: 750.00, item_type: 'retail' },
+    { key_name: 'l_oreal_tecni_art_spray', nombre: '[L\'Oréal] Tecni art spray', stock: 1, min: 2, cost_per_unit: 0.00, price: 620.00, item_type: 'retail' },
+    { key_name: 'l_oreal_mythic_oil_200_ml_mascarilla', nombre: '[L\'Oréal] Mythic oil 200 ml mascarilla', stock: 2, min: 2, cost_per_unit: 0.00, price: 500.00, item_type: 'retail' },
+    { key_name: 'l_oreal_dulcia_3', nombre: '[L\'Oréal] Dulcia 3', stock: 10, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'l_oreal_dulcia_1', nombre: '[L\'Oréal] Dulcia 1', stock: 7, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'l_oreal_dulcia_0', nombre: '[L\'Oréal] Dulcia 0', stock: 9, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'l_oreal_dulcia_2', nombre: '[L\'Oréal] Dulcia 2', stock: 0, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'l_oreal_dulcia_neutralizador_1_litro', nombre: '[L\'Oréal] Dulcia neutralizador 1 litro', stock: 1, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_6_volumenes', nombre: '[Peróxido L\'Oréal] 6 volúmenes', stock: 6, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_9_volumenes', nombre: '[Peróxido L\'Oréal] 9 volúmenes.', stock: 7, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_15_volumenes', nombre: '[Peróxido L\'Oréal] 15 volúmenes', stock: 4, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_20_volumenes', nombre: '[Peróxido L\'Oréal] 20 volúmenes', stock: 11, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_30_volumenes', nombre: '[Peróxido L\'Oréal] 30 volúmenes.', stock: 6, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_40_volumenes', nombre: '[Peróxido L\'Oréal] 40 volúmenes', stock: 4, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_wella_20_volumenes', nombre: '[Peróxido Wella] 20 volúmenes', stock: 2, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_wella_30_volumenes', nombre: '[Peróxido Wella] 30 volúmenes', stock: 1, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_wella_40_volumenes', nombre: '[Peróxido Wella] 40 volúmenes', stock: 2, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_blond_studio_20_volumenes', nombre: '[Peróxido L\'Oréal Blond Studio] 20 volúmenes', stock: 7, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_blond_studio_30_volumenes', nombre: '[Peróxido L\'Oréal Blond Studio] 30 volúmenes', stock: 0, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'peroxido_l_oreal_blond_studio_40_volumenes', nombre: '[Peróxido L\'Oréal Blond Studio] 40 volúmenes', stock: 0, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'otros_mucota_10', nombre: '[Otros] Mucota 10', stock: 3, min: 2, cost_per_unit: 0.00, price: 1025.00, item_type: 'retail' },
+    { key_name: 'otros_mucota_04', nombre: '[Otros] Mucota 04', stock: 2, min: 2, cost_per_unit: 0.00, price: 960.00, item_type: 'retail' },
+    { key_name: 'otros_clean_balance_shampoo', nombre: '[Otros] Clean balance shampoo', stock: 2, min: 2, cost_per_unit: 0.00, price: 1400.00, item_type: 'retail' },
+    { key_name: 'otros_clean_balance_performance_shampoo', nombre: '[Otros] Clean balance performance shampoo', stock: 18, min: 2, cost_per_unit: 0.00, price: 1400.00, item_type: 'retail' },
+    { key_name: 'otros_mucota_ex_treatment', nombre: '[Otros] Mucota ex treatment', stock: 2, min: 2, cost_per_unit: 0.00, price: 1025.00, item_type: 'retail' },
+    { key_name: 'otros_pations_500_ml', nombre: '[Otros] Pations 500 ml', stock: 1, min: 2, cost_per_unit: 0.00, price: 1600.00, item_type: 'retail' },
+    { key_name: 'otros_mucota_9', nombre: '[Otros] Mucota 9', stock: 15, min: 2, cost_per_unit: 0.00, price: 960.00, item_type: 'retail' },
+    { key_name: 'otros_promille_color_e', nombre: '[Otros] Promille color e', stock: 1, min: 2, cost_per_unit: 0.00, price: 800.00, item_type: 'retail' },
+    { key_name: 'otros_nutrifier_glicerol', nombre: '[Otros] Nutrifier glicerol', stock: 0, min: 2, cost_per_unit: 0.00, price: null, item_type: 'retail' },
+    { key_name: 'decolorantes_decolorante_wella', nombre: '[Decolorantes] Decolorante wella', stock: 1, min: 1, cost_per_unit: 0.00, price: null, item_type: 'insumo' },
+    { key_name: 'decolorantes_decolorante_blond_aturdio_8', nombre: '[Decolorantes] Decolorante blond aturdio 8', stock: 1, min: 1, cost_per_unit: 0.00, price: null, item_type: 'insumo' },
+    { key_name: 'decolorantes_decolorante_blond_studio_9', nombre: '[Decolorantes] Decolorante blond studio 9', stock: 2, min: 1, cost_per_unit: 0.00, price: null, item_type: 'insumo' },
+    { key_name: 'decolorantes_decolorante_blond_studio_7', nombre: '[Decolorantes] Decolorante blond studio 7', stock: 0, min: 1, cost_per_unit: 0.00, price: null, item_type: 'insumo' }
   ],
   nomina: [],
   logs: [
@@ -202,10 +314,82 @@ async function initDb() {
             'Efectos de color', 'Tinte completo', 'Retoque de tinte', 'Matiz', 'Balayage', 'Babylight', 'Luces', 'Extracción de color', 'Base permanente',
             'Peinado tenaza ondulado', 'Alto peinado chongo', 'Secado/brushing', 'Medio recogido'
           ] WHERE nombre = 'Tony'`);
+
+          // Ensure campaign services exist in PostgreSQL
+          await pool.query(`
+            INSERT INTO servicios (nombre, duracion_minutos, precio_fijo) VALUES 
+            ('Nanoplastia Premium', 300, 3200.00),
+            ('Depilación IPL', 60, 3200.00),
+            ('Diagnóstico IPL', 20, 300.00),
+            ('Microblading', 180, 4800.00),
+            ('Micropigmentación', 180, 5500.00)
+            ON CONFLICT (nombre) DO UPDATE SET 
+              precio_fijo = EXCLUDED.precio_fijo, 
+              duracion_minutos = EXCLUDED.duracion_minutos;
+          `);
+
+          // Update specialties for campaign stylings in PostgreSQL
+          await pool.query(`
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Nanoplastia Premium') 
+            WHERE nombre = 'Pili' AND NOT ('Nanoplastia Premium' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Nanoplastia Premium') 
+            WHERE nombre = 'Joel' AND NOT ('Nanoplastia Premium' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Nanoplastia Premium') 
+            WHERE nombre = 'Rose' AND NOT ('Nanoplastia Premium' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Depilación IPL') 
+            WHERE nombre = 'Rose' AND NOT ('Depilación IPL' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Diagnóstico IPL') 
+            WHERE nombre = 'Rose' AND NOT ('Diagnóstico IPL' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Depilación IPL') 
+            WHERE nombre = 'Laura' AND NOT ('Depilación IPL' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Diagnóstico IPL') 
+            WHERE nombre = 'Laura' AND NOT ('Diagnóstico IPL' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Microblading') 
+            WHERE nombre = 'Lizbeth' AND NOT ('Microblading' = ANY(especialidades));
+            
+            UPDATE estilistas 
+            SET especialidades = array_append(especialidades, 'Micropigmentación') 
+            WHERE nombre = 'Lizbeth' AND NOT ('Micropigmentación' = ANY(especialidades));
+          `);
           
           console.log('Stylists colors and specialties updated successfully in PostgreSQL.');
         } catch (colorErr) {
           console.warn('Could not update stylist info in database:', colorErr.message);
+        }
+
+        // Migration: sync inventory items & prices from initialData
+        try {
+          for (const item of initialData.inventario) {
+            await pool.query(`
+              INSERT INTO inventario (key_name, nombre, stock, min, cost_per_unit, price, item_type)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              ON CONFLICT (key_name) DO NOTHING
+            `, [item.key_name, item.nombre, item.stock, item.min, item.cost_per_unit, item.price, item.item_type]);
+            if (item.price !== null) {
+              await pool.query(
+                'UPDATE inventario SET price = $1 WHERE key_name = $2 AND price IS NULL',
+                [item.price, item.key_name]
+              );
+            }
+          }
+          console.log(`[DB] Inventory sync migration applied (${initialData.inventario.length} items).`);
+        } catch (invErr) {
+          console.warn('[DB] Inventory sync migration warning:', invErr.message);
         }
         
         // Auto-initialize schema if services table does not exist

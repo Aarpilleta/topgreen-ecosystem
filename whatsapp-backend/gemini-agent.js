@@ -41,7 +41,7 @@ async function dbGetServiceDetails(servicioName) {
   }
   return {
     encontrado: false,
-    mensaje: `No encontramos un servicio con el nombre "${servicioName}". Ofrecemos: Nanoplastia Premium, Balayage Premium, Corte Premium, Tinte de Cobertura, Botox Capilar y Depilación IPL.`
+    mensaje: `No encontramos un servicio con el nombre "${servicioName}". Ofrecemos: Nanoplastia Premium, Balayage Premium, Corte Premium, Tinte de Cobertura, Botox Capilar, Depilación IPL, Diagnóstico IPL, Microblading y Micropigmentación.`
   };
 }
 
@@ -279,16 +279,16 @@ async function handleConversation(chatId, userMessage) {
     `- FLUJO B (Depilación IPL - Enfoque Protección Cutánea):\n` +
     `  * Paso 1 (Bienvenida/Filtro): "¡Hola! ✨ Qué alegría recibirte en la línea VIP de Top Green Salon 🌿. Veo que buscas liberarte del rastrillo con nuestra tecnología IPL inteligente. Atendemos exclusivamente en nuestra sede de Mundo E. ¿Te queda accesible esta zona?"\n` +
     `  * Paso 2: Si confirma ubicación, di: "¡Perfecto! Tu piel te lo va a agradecer 💖. Para garantizar que eres candidata ideal y calibrar el equipo según tu tipo de vello, agendamos una sesión de diagnóstico dermatológico especializado de 20 minutos. Esta sesión tiene una inversión de $300 MXN, pero al iniciar tu tratamiento en esa misma cita, este monto se te descuenta al 100% (tu diagnóstico queda completamente gratis). ¿Prefieres reservar tu espacio por la mañana o por la tarde?"\n` +
-    `- FLUJO C (Micropigmentación - Enfoque Alta Gama):\n` +
-    `  * Paso 1 (Bienvenida/Filtro): "¡Hola, hermosa! ✨ Bienvenida a Top Green Salon 🌿. Qué gran decisión diseñar tu mirada con nuestro servicio de Micropigmentación premium. Nos encontramos ubicados en Mundo E. ¿Esta ubicación te resulta conveniente para visitarnos?"\n` +
+    `- FLUJO C (Microblading / Micropigmentación - Enfoque Alta Gama):\n` +
+    `  * Paso 1 (Bienvenida/Filtro): "¡Hola, hermosa! ✨ Bienvenida a Top Green Salon 🌿. Qué gran decisión diseñar tu mirada con nuestro servicio de Microblading o Micropigmentación premium. Nos encontramos ubicados en Mundo E. ¿Esta ubicación te resulta conveniente para visitarnos?"\n` +
     `  * Paso 2: Si confirma ubicación, di: "¡Maravilloso! Te platico: este servicio High-Ticket lo realiza una Master Artist externa que asiste al salón únicamente bajo cita confirmada para esculpir tu diseño de forma personalizada. Para bloquear la fecha exclusiva en su agenda, solicitamos un apartado de garantía de $500 MXN (que se abona directo al total de tu servicio el día de tu cita). ¿Te gustaría conocer los días disponibles que tenemos para esta semana?"\n` +
     `- FLUJO D (Clientes Orgánicos / Sin anuncio):\n` +
-    `  * Si el mensaje inicial del cliente no contiene intención de Nanoplastia, IPL o Micropigmentación, saluda amablemente, di que están ubicados en Mundo E, y pregúntale por el servicio de su interés.\n\n` +
+    `  * Si el mensaje inicial del cliente no contiene intención de Nanoplastia, IPL, Microblading o Micropigmentación, saluda amablemente, di que están ubicados en Mundo E, y pregúntale por el servicio de su interés.\n\n` +
     `REGLAS DE AGENDA Y DOWNSELL:\n` +
     `- DOWNSELL: Si duda del precio de Nanoplastia ($3,200 MXN) o IPL ($3,200 MXN), ofrece de inmediato el Botox Capilar ($850 MXN) como alternativa accesible.\n` +
     `- PROTOCOLO ANTI NO-SHOW (Al elegir horario con 'tool_hold_appointment'):\n` +
     `  * Si es Servicio de Bajo Margen / General (ej: Uñas, Corte Premium): "¡Listo, hermosa! Tu espacio para [Servicio] quedó reservado para el [Día] a las [Hora] 🕒. Para respetar el tiempo de nuestras especialistas y resguardar tu lugar, te pedimos de favor confirmar tu asistencia 24 horas antes a través de un link que te enviaremos. ¿Te parece bien si te agendamos el recordatorio automático?"\n` +
-    `  * Si es IPL o Micropigmentación: "¡Excelente elección! Tu bloque de tiempo para [Servicio] está pre-reservado para el [Día] a las [Hora] 🕒. Como este servicio requiere la preparación de aparatología médica avanzada o la asistencia de nuestra especialista externa, solo requerimos validar tu apartado de garantía. Aquí tienes el enlace seguro para realizar tu depósito de forma rápida: [Link de Pago/Transferencia]. Una vez que lo realices, el sistema blindará tu cita de inmediato ✨. ¿Te genera alguna duda el proceso de pago?"\n\n` +
+    `  * Si es IPL, Microblading o Micropigmentación: "¡Excelente elección! Tu bloque de tiempo para [Servicio] está pre-reservado para el [Día] a las [Hora] 🕒. Como este servicio requiere la preparación de aparatología médica avanzada o la asistencia de nuestra especialista externa, solo requerimos validar tu apartado de garantía. Aquí tienes el enlace seguro para realizar tu depósito de forma rápida: [Link de Pago/Transferencia]. Una vez que lo realices, el sistema blindará tu cita de inmediato ✨. ¿Te genera alguna duda el proceso de pago?"\n\n` +
     `INFORMACIÓN DE ESPECIALISTAS:\n` +
     `- Pili, Joel, Rose, Majo, Cande, Judith, Laura, Fran y Lizbeth.\n` +
     `- Fran sólo realiza cortes (Corte Premium).\n` +
